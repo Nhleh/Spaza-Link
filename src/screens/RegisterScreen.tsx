@@ -89,7 +89,7 @@ export const RegisterScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col px-6 py-8">
+    <div className="min-h-screen bg-spaza-bg flex flex-col px-6 pt-4 pb-8 safe-area-top safe-area-bottom">
       <button onClick={() => navigate(-1)} className="mb-4 w-10 h-10 bg-card-bg rounded-xl border border-border-custom flex items-center justify-center">
         <ArrowLeft size={20} className="text-text-primary" />
       </button>

@@ -253,9 +253,9 @@ export const HomeDashboard: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-[280px] bg-card-bg z-[70] shadow-2xl flex flex-col pt-12"
+              className="fixed inset-y-0 left-0 w-[280px] bg-card-bg z-[70] shadow-2xl flex flex-col pt-4 safe-area-top"
             >
-              <div className="px-6 mb-8 flex justify-between items-center">
+              <div className="px-6 mb-8 flex justify-between items-center mt-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-spaza-green rounded-2xl flex items-center justify-center text-white font-bold text-xl uppercase">
                     {(userProfile?.ownerName || 'U')[0]}
@@ -307,8 +307,8 @@ export const HomeDashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* Header Area */}
-      <header className="bg-spaza-green p-6 pt-12 pb-14 rounded-t-[28px] relative">
-        <div className="flex justify-between items-center relative z-10">
+      <header className="bg-spaza-green p-6 pt-4 safe-area-top pb-14 rounded-t-[28px] relative">
+        <div className="flex justify-between items-center relative z-10 mt-2">
           <button 
             onClick={() => setIsSidebarOpen(true)}
             className="p-1 text-white active:scale-90 transition-transform"

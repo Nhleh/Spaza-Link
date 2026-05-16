@@ -337,8 +337,8 @@ export const ProfileScreen: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <header className="px-6 pt-12 pb-6 flex items-center justify-between bg-card-bg border-b border-border-custom">
-        <h2 className="text-lg font-bold text-text-primary">Account</h2>
+      <header className="px-6 pt-4 safe-area-top pb-6 flex items-center justify-between bg-card-bg border-b border-border-custom">
+        <h2 className="text-lg font-bold text-text-primary mt-4">Account</h2>
       </header>
 
       <div className="px-6 py-8 space-y-8 flex-1 overflow-y-auto pb-40">
@@ -519,8 +519,8 @@ export const ProfileScreen: React.FC = () => {
               exit={{ opacity: 0, x: '100%' }}
               className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
             >
-              <header className="px-6 py-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4">
+              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4 mt-4">
                   <button onClick={() => setShowShopsList(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -611,8 +611,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 py-12 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setIsAddingShop(false)} className="p-2 text-text-secondary">
+                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setIsAddingShop(false)} className="p-2 text-text-secondary mt-4">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">Add New Spaza Shop</h2>
@@ -727,8 +727,8 @@ export const ProfileScreen: React.FC = () => {
               exit={{ opacity: 0, x: '100%' }}
               className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
             >
-              <header className="px-6 py-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4">
+              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4 mt-4">
                   <button onClick={() => setShowPayments(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -793,8 +793,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 py-12 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setEditingPayment(null)} className="p-2 text-text-secondary">
+                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setEditingPayment(null)} className="p-2 text-text-secondary mt-4">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">Add Payment Method</h2>
@@ -881,8 +881,8 @@ export const ProfileScreen: React.FC = () => {
               exit={{ opacity: 0, x: '100%' }}
               className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
             >
-              <header className="px-6 py-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4">
+              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4 mt-4">
                   <button onClick={() => setShowAddresses(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -938,8 +938,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 py-12 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setEditingAddress(null)} className="p-2 text-text-secondary">
+                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setEditingAddress(null)} className="p-2 text-text-secondary mt-4">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">{userProfile?.addresses?.find(a => a.id === editingAddress.id) ? 'Edit Address' : 'New Address'}</h2>

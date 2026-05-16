@@ -77,8 +77,8 @@ export const NotificationsScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col pt-4">
-      <header className="px-6 flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-spaza-bg flex flex-col pt-4 safe-area-top">
+      <header className="px-6 flex items-center justify-between mb-8 mt-2">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-2 bg-card-bg rounded-lg shadow-sm border border-border-custom">
                 <ArrowLeft size={20} className="text-spaza-green" />

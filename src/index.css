@@ -41,6 +41,18 @@
   --shadow-premium: 0 4px 20px var(--shadow-color);
 }
 
+@utility safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
 @layer base {
   body {
     @apply font-sans bg-spaza-bg text-text-primary antialiased transition-colors duration-200;

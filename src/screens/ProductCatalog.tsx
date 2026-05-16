@@ -78,8 +78,8 @@ export const ProductCatalog: React.FC = () => {
       </AnimatePresence>
 
       {/* Search Header */}
-      <header className="bg-spaza-green pt-12 pb-6 px-6 rounded-t-[28px] space-y-6">
-        <div className="flex items-center gap-4">
+      <header className="bg-spaza-green pt-4 safe-area-top pb-6 px-6 rounded-t-[28px] space-y-6">
+        <div className="flex items-center gap-4 mt-4">
             <button 
               onClick={() => navigate(-1)} 
               className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
@@ -198,7 +198,7 @@ export const ProductCatalog: React.FC = () => {
             exit={{ opacity: 0, y: '100%' }}
             className="fixed inset-0 z-50 bg-card-bg"
           >
-            <header className="px-6 pt-12 pb-6 border-b border-border-custom flex items-center justify-between">
+            <header className="px-6 pt-6 safe-area-top pb-6 border-b border-border-custom flex items-center justify-between">
               <h2 className="text-xl font-bold text-text-primary">Sort & Filter</h2>
               <button 
                 onClick={() => setShowFilters(false)}
