@@ -1,11 +1,37 @@
-<div align="center">
+# Spaza Shop - Production Delivery
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+This is a production-ready mobile-first web application built with React, Vite, Tailwind CSS, and Framer Motion. 
 
-  <h1>Built with AI Studio</h2>
+## 🚀 Quick Start
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+2. **Configure Environment**
+   - Create a `.env` file based on `.env.example`.
+   - Add your Firebase configuration keys.
 
-</div>
+3. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for Production**
+   ```bash
+   npm run build
+   ```
+
+## 📦 Project Structure
+- `src/screens/`: All application pages (Home, Catalog, Cart, etc.)
+- `src/components/`: Reusable UI components.
+- `src/lib/`: Utilities and Firebase configuration.
+- `docs/`: Full deployment and setup guides.
+
+## 🛠 Tech Stack
+- **Frontend**: React 18, Vite, TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Backend**: Firebase (Auth & Firestore)

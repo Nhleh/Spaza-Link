@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile for spaza shop owners or customers",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "shopName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "location": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "photoUrl": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "admin"] },
+        "activeShopId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "shop": {
+      "title": "Shop",
+      "description": "Spaza shop details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "photoUrl": { "type": "string" },
+        "managerName": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "address"]
+    },
+    "product": {
+      "title": "Product",
+      "description": "Inventory products available for purchase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "unit": { "type": "string" },
+        "img": { "type": "string" },
+        "stock": { "type": "integer" }
+      },
+      "required": ["id", "name", "price"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "Purchase orders made by spaza shops",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Order Confirmed", "Being Packed", "Out for Delivery", "Delivered"] },
+        "deliveryAddress": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "driverInfo": { "type": "object" }
+      },
+      "required": ["id", "userId", "items", "totalAmount", "status"]
+    },
+    "notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Individual user profiles"
+    },
+    "/shops/{shopId}": {
+      "schema": "shop",
+      "description": "Spaza shop details"
+    },
+    "/products/{productId}": {
+      "schema": "product",
+      "description": "Available product catalog"
+    },
+    "/orders/{orderId}": {
+      "schema": "order",
+      "description": "Orders placed in the system"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "notification",
+      "description": "User notifications"
+    }
+  }
+}

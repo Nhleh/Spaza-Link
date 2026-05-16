@@ -1,0 +1,11 @@
+{
+  "name": "SpazaLink",
+  "description": "Premium spaza grocery ordering platform with delivery at your doorstep.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
