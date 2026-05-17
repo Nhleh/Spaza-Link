@@ -20,12 +20,23 @@ export const OrderTrackingScreen: React.FC = () => {
       return;
     }
 
-    const unsubscribe = firebaseService.subscribeToDoc('orders', orderId, (data) => {
-      setOrderData(data);
-      setLoading(false);
-    });
+    const fetchOrder = async () => {
+      try {
+        const data = await firebaseService.getDoc('orders', orderId);
+        if (data) {
+          setOrderData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching order:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchOrder();
+    const interval = setInterval(fetchOrder, 10000); // Poll every 10s
+
+    return () => clearInterval(interval);
   }, [orderId]);
 
   const showToast = (message: string) => {
@@ -67,8 +78,8 @@ export const OrderTrackingScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col">
-      <header className="px-6 pt-12 pb-6 flex items-center gap-4 bg-card-bg border-b border-border-custom">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col">
+      <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-6 flex items-center gap-4 bg-card-bg border-b border-border-custom">
         <button 
           onClick={() => navigate(-1)} 
           className="w-10 h-10 bg-spaza-bg rounded-xl flex items-center justify-center active:scale-95 transition-transform"

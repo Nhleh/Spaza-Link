@@ -1,16 +1,5 @@
-import { 
-  collection, 
-  getDocs, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  query, 
-  where,
-  onSnapshot
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth } from '../lib/firebase';
+import { apiRequest } from '../lib/apiClient';
 
 export enum OperationType {
   CREATE = 'create',
@@ -21,100 +10,60 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
 export const firebaseService = {
-  // Generic collection fetch
+  // Generic collection fetch via backend
   getCollection: async (collectionName: string) => {
     try {
-      const querySnapshot = await getDocs(collection(db, collectionName));
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Use public products endpoint if it's products, otherwise use protected data endpoint
+      const endpoint = collectionName === 'products' ? '/api/products' : `/api/data/${collectionName}`;
+      return await apiRequest(endpoint);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, collectionName);
+      console.error(`Error fetching collection ${collectionName}:`, error);
+      throw error;
     }
   },
 
-  // Get single doc
+  // Get single doc via backend
   getDoc: async (collectionName: string, id: string) => {
-    const path = `${collectionName}/${id}`;
     try {
-      const docRef = doc(db, collectionName, id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-      }
+      return await apiRequest(`/api/data/${collectionName}/${id}`);
+    } catch (error) {
+      console.error(`Error fetching doc ${collectionName}/${id}:`, error);
       return null;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, path);
     }
   },
 
-  // Save/Create doc
+  // Save/Create doc via backend
   saveDoc: async (collectionName: string, id: string, data: any) => {
-    const path = `${collectionName}/${id}`;
     try {
-      await setDoc(doc(db, collectionName, id), data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-  },
-
-  // Update doc
-  updateDoc: async (collectionName: string, id: string, data: any) => {
-    const path = `${collectionName}/${id}`;
-    try {
-      await updateDoc(doc(db, collectionName, id), data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, path);
-    }
-  },
-
-  // Subscribe to doc changes
-  subscribeToDoc: (collectionName: string, id: string, callback: (data: any) => void) => {
-    const path = `${collectionName}/${id}`;
-    const docRef = doc(db, collectionName, id);
-    return onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        callback({ id: snapshot.id, ...snapshot.data() });
+      // Use specific orders endpoint if it's an order
+      if (collectionName === 'orders') {
+        return await apiRequest('/api/orders', {
+          method: 'POST',
+          body: JSON.stringify(data)
+        });
       }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
-    });
+      
+      return await apiRequest(`/api/data/${collectionName}/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error(`Error saving doc ${collectionName}/${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update doc via backend
+  updateDoc: async (collectionName: string, id: string, data: any) => {
+    try {
+      return await apiRequest(`/api/data/${collectionName}/${id}`, {
+        method: 'POST', // Backend uses POST with merge: true for updates
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error(`Error updating doc ${collectionName}/${id}:`, error);
+      throw error;
+    }
   }
 };

@@ -7,7 +7,7 @@ export const SplashScreen: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#0A1A14] flex flex-col items-center justify-between pt-16 safe-area-top pb-16 safe-area-bottom px-8">
+    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-[#0A1A14] flex flex-col items-center justify-between pt-[env(safe-area-inset-top,2rem)] pb-8 px-8">
       {/* Background Storefront Image (Bottom) */}
       <div 
         className="absolute bottom-0 left-0 right-0 h-2/3 opacity-40 bg-cover bg-top bg-no-repeat"

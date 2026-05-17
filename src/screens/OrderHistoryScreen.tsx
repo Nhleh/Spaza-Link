@@ -31,8 +31,8 @@ export const OrderHistoryScreen: React.FC = () => {
     );
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col pt-4">
-      <header className="px-6 space-y-4 mb-6">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col pt-0">
+      <header className="px-6 pt-[env(safe-area-inset-top,2rem)] space-y-4 mb-6">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-2 bg-card-bg rounded-xl shadow-sm border border-border-custom">
                 <ArrowLeft size={20} className="text-spaza-green" />

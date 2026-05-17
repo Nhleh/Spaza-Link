@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, MapPin, CreditCard, Lock, Bell, HelpCircle, LogOut, ChevronRight, Store, CheckCircle, AlertCircle, Loader2, Camera, X } from 'lucide-react';
-import { auth, db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { firebaseService } from '../services/firebaseService';
@@ -11,7 +11,6 @@ import { LocationPicker } from '../components/LocationPicker';
 import { UserProfile, Address, PaymentMethod, Shop } from '../types';
 import { Plus, Trash2, CreditCard as CardIcon, Eye, EyeOff, Building2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { collection, query, where, onSnapshot, addDoc } from 'firebase/firestore';
 
 export const ProfileScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +56,8 @@ export const ProfileScreen: React.FC = () => {
   }, [location.state]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubShops: (() => void) | null = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const profile = await firebaseService.getDoc('users', user.uid);
@@ -71,18 +71,10 @@ export const ProfileScreen: React.FC = () => {
             createdAt: new Date().toISOString()
           } as UserProfile);
 
-          // Listen to user's shops
-          const shopsQuery = query(
-            collection(db, 'shops'),
-            where('ownerId', '==', user.uid)
-          );
-          
-          const unsubShops = onSnapshot(shopsQuery, (snapshot) => {
-            const shopsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shop));
-            setShops(shopsList);
-          });
+          // Fetch user's shops via backend API
+          const shopsList = await firebaseService.getCollection('shops');
+          setShops(shopsList || []);
 
-          return () => unsubShops();
         } catch (error) {
           console.error('Error fetching profile:', error);
         } finally {
@@ -93,7 +85,9 @@ export const ProfileScreen: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+    };
   }, [navigate]);
 
   const handleAddShop = async () => {
@@ -116,16 +110,21 @@ export const ProfileScreen: React.FC = () => {
         lng: newShop.lng || 0
       };
 
-      const docRef = await addDoc(collection(db, 'shops'), shopData);
+      const shopId = Math.random().toString(36).substr(2, 9);
+      await firebaseService.saveDoc('shops', shopId, shopData);
       
       // If no active shop, set this as active
       if (!userProfile?.activeShopId) {
         await firebaseService.updateDoc('users', auth.currentUser.uid, {
-          activeShopId: docRef.id,
+          activeShopId: shopId,
           shopName: shopData.name,
           location: shopData.address
         });
       }
+
+      // Refresh shops list
+      const updatedShops = await firebaseService.getCollection('shops');
+      setShops(updatedShops || []);
 
       showToast('Shop added successfully!', 'success');
       setIsAddingShop(false);
@@ -316,7 +315,7 @@ export const ProfileScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col">
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
@@ -337,8 +336,8 @@ export const ProfileScreen: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <header className="px-6 pt-4 safe-area-top pb-6 flex items-center justify-between bg-card-bg border-b border-border-custom">
-        <h2 className="text-lg font-bold text-text-primary mt-4">Account</h2>
+      <header className="px-6 pt-[env(safe-area-inset-top,1.5rem)] pb-6 flex items-center justify-between bg-card-bg border-b border-border-custom">
+        <h2 className="text-lg font-bold text-text-primary">Account</h2>
       </header>
 
       <div className="px-6 py-8 space-y-8 flex-1 overflow-y-auto pb-40">
@@ -517,10 +516,10 @@ export const ProfileScreen: React.FC = () => {
               initial={{ opacity: 0, x: '100%' }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: '100%' }}
-              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
+              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col"
             >
-              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4 mt-4">
+              <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4">
                   <button onClick={() => setShowShopsList(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -611,8 +610,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setIsAddingShop(false)} className="p-2 text-text-secondary mt-4">
+                    <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setIsAddingShop(false)} className="p-2 text-text-secondary">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">Add New Spaza Shop</h2>
@@ -725,10 +724,10 @@ export const ProfileScreen: React.FC = () => {
               initial={{ opacity: 0, x: '100%' }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: '100%' }}
-              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
+              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col"
             >
-              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4 mt-4">
+              <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4">
                   <button onClick={() => setShowPayments(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -793,8 +792,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setEditingPayment(null)} className="p-2 text-text-secondary mt-4">
+                    <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setEditingPayment(null)} className="p-2 text-text-secondary">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">Add Payment Method</h2>
@@ -879,10 +878,10 @@ export const ProfileScreen: React.FC = () => {
               initial={{ opacity: 0, x: '100%' }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: '100%' }}
-              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col pt-4"
+              className="fixed inset-0 z-[70] bg-spaza-bg flex flex-col"
             >
-              <header className="px-6 pt-4 safe-area-top pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
-                <div className="flex items-center gap-4 mt-4">
+              <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-4 flex items-center justify-between border-b border-border-custom bg-card-bg">
+                <div className="flex items-center gap-4">
                   <button onClick={() => setShowAddresses(false)} className="p-2 -ml-2 text-text-secondary active:bg-spaza-bg rounded-full transition-colors">
                     <ArrowLeft size={24} />
                   </button>
@@ -938,8 +937,8 @@ export const ProfileScreen: React.FC = () => {
                     exit={{ opacity: 0, y: '100%' }}
                     className="fixed inset-0 z-[80] bg-spaza-bg flex flex-col"
                   >
-                    <header className="px-6 pt-4 safe-area-top pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
-                      <button onClick={() => setEditingAddress(null)} className="p-2 text-text-secondary mt-4">
+                    <header className="px-6 pt-[env(safe-area-inset-top,2rem)] pb-8 flex items-center gap-4 border-b border-border-custom bg-card-bg">
+                      <button onClick={() => setEditingAddress(null)} className="p-2 text-text-secondary">
                         <X size={24} />
                       </button>
                       <h2 className="text-lg font-bold text-text-primary">{userProfile?.addresses?.find(a => a.id === editingAddress.id) ? 'Edit Address' : 'New Address'}</h2>

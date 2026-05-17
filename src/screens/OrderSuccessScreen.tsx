@@ -9,7 +9,7 @@ export const OrderSuccessScreen: React.FC = () => {
   const orderId = location.state?.orderId || 'N/A';
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col items-center justify-center px-8 text-center">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col items-center justify-center px-8 text-center">
       <motion.div
         initial={{ scale: 0, rotate: -45 }}
         animate={{ scale: 1, rotate: 0 }}

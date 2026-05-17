@@ -43,7 +43,7 @@ const AppRoutes = () => {
   const hideNav = ['/', '/splash', '/login', '/register', '/checkout', '/order-tracking'].includes(location.pathname);
 
   return (
-    <div className="w-full h-full min-h-screen bg-spaza-bg relative overflow-hidden flex flex-col">
+    <div className="w-full h-full min-h-[100dvh] bg-spaza-bg relative overflow-hidden flex flex-col">
       <AnimatePresence mode="wait">
         <Routes location={location}>
           <Route path="/" element={<PageWrapper><SplashScreen /></PageWrapper>} />

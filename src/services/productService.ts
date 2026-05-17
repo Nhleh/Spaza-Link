@@ -1,6 +1,4 @@
-import { collection, getDocs, setDoc, doc, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { firebaseService, OperationType, handleFirestoreError } from './firebaseService';
+import { apiRequest } from '../lib/apiClient';
 
 export interface Product {
   id: string;
@@ -30,17 +28,13 @@ const INITIAL_PRODUCTS: Product[] = [
 export const productService = {
   getProducts: async (): Promise<Product[]> => {
     try {
-      const products = await firebaseService.getCollection('products') as Product[];
+      const products = await apiRequest('/api/products') as Product[];
       
       // If collection is empty, trigger seed
-      const needsSeeding = !products || products.length === 0;
-
-      if (needsSeeding) {
-        console.log('Seeding products to Firestore...');
+      if (!products || products.length === 0) {
+        console.log('Seeding products to Firestore via backend...');
         await productService.seedProducts();
-        // Fetch again after seeding
-        const updatedProducts = await firebaseService.getCollection('products');
-        return updatedProducts as Product[];
+        return await apiRequest('/api/products') as Product[];
       }
       
       return products;
@@ -52,12 +46,13 @@ export const productService = {
 
   seedProducts: async () => {
     try {
-      for (const product of INITIAL_PRODUCTS) {
-        await setDoc(doc(db, 'products', product.id), product);
-      }
-      console.log('Products seeded successfully to Firestore');
+      await apiRequest('/api/products/seed', {
+        method: 'POST',
+        body: JSON.stringify({ products: INITIAL_PRODUCTS })
+      });
+      console.log('Products seeded successfully');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'products');
+      console.error('Error seeding products:', error);
     }
   }
 };

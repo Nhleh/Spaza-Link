@@ -20,7 +20,7 @@ service cloud.firestore {
       return resource.data;
     }
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     // --- Users ---
@@ -47,7 +47,7 @@ service cloud.firestore {
       }
 
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
-      allow get: if isSignedIn() && isValidId(shopId);
+      allow get: if isSignedIn() && (resource == null || resource.data.ownerId == request.auth.uid) && isValidId(shopId);
       allow create: if isSignedIn() && isValidId(shopId) && isValidShop(incoming());
       allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidShop(incoming()) &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['name', 'address', 'photoUrl', 'managerName', 'contactNumber', 'lat', 'lng']);
@@ -56,7 +56,7 @@ service cloud.firestore {
     // --- Products ---
     match /products/{productId} {
       allow read: if true;
-      allow write: if false; // Only manageable via Admin SDK/dashboard (not built yet)
+      allow write: if isSignedIn(); // Allow authenticated users to seed products
     }
 
     // --- Orders ---

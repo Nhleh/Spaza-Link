@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, ChevronDown, Rocket, Truck, ArrowRight, CheckCircle, Beer, Cookie, Package, Bath, Sandwich, SprayCan, Snowflake, LayoutGrid, X, LogOut, User, History, Settings, HelpCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { auth, db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { firebaseService } from '../services/firebaseService';
-import { query, collection, where, onSnapshot, doc } from 'firebase/firestore';
+import { apiRequest } from '../lib/apiClient';
 
 export const HomeDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -25,45 +25,27 @@ export const HomeDashboard: React.FC = () => {
   }, [shops, userProfile?.activeShopId]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubProfile: (() => void) | null = null;
+    let unsubShops: (() => void) | null = null;
+    let unsubNotifs: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          // Listen to user profile
-          const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-            if (docSnap.exists()) {
-              setUserProfile({ uid: docSnap.id, ...docSnap.data() });
-            }
-          });
+          // Fetch user profile via backend
+          const profile = await apiRequest('/api/user/profile');
+          setUserProfile({ uid: user.uid, ...profile });
           
-          // Fetch user's shops
-          const shopsQuery = query(
-            collection(db, 'shops'),
-            where('ownerId', '==', user.uid)
-          );
+          // Fetch user's shops via backend
+          const shopsList = await apiRequest('/api/data/shops');
+          setShops(shopsList);
           
-          const unsubShops = onSnapshot(shopsQuery, (snapshot) => {
-            const shopsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setShops(shopsList);
-          });
-          
-          // Setup unread notifications listener
-          const q = query(
-            collection(db, 'notifications'), 
-            where('userId', '==', user.uid),
-            where('isRead', '==', false)
-          );
-          
-          const unsubNotifs = onSnapshot(q, (snapshot) => {
-            setHasUnreadNotifications(!snapshot.empty);
-          });
+          // Fetch notifications via backend
+          const notifs = await apiRequest('/api/data/notifications');
+          setHasUnreadNotifications(notifs.some((n: any) => !n.isRead));
 
-          return () => {
-            unsubProfile();
-            unsubShops();
-            unsubNotifs();
-          };
         } catch (error) {
-          console.error('Error fetching data:', error);
+          console.error('Error fetching dashboard data:', error);
         } finally {
           setLoading(false);
         }
@@ -72,7 +54,9 @@ export const HomeDashboard: React.FC = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -132,7 +116,7 @@ export const HomeDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-spaza-bg">
+    <div className="min-h-[100dvh] pb-32 bg-spaza-bg">
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
@@ -253,7 +237,7 @@ export const HomeDashboard: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-[280px] bg-card-bg z-[70] shadow-2xl flex flex-col pt-4 safe-area-top"
+              className="fixed inset-y-0 left-0 w-[280px] bg-card-bg z-[70] shadow-2xl flex flex-col pt-4"
             >
               <div className="px-6 mb-8 flex justify-between items-center mt-4">
                 <div className="flex items-center gap-3">
@@ -307,8 +291,8 @@ export const HomeDashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* Header Area */}
-      <header className="bg-spaza-green p-6 pt-4 safe-area-top pb-14 rounded-t-[28px] relative">
-        <div className="flex justify-between items-center relative z-10 mt-2">
+      <header className="bg-spaza-green p-6 pt-[env(safe-area-inset-top,2rem)] pb-14 relative shadow-lg">
+        <div className="flex justify-between items-center relative z-10">
           <button 
             onClick={() => setIsSidebarOpen(true)}
             className="p-1 text-white active:scale-90 transition-transform"
@@ -318,9 +302,16 @@ export const HomeDashboard: React.FC = () => {
           
           <div className="flex flex-col items-center">
             <span className="text-white/80 text-[12px] font-medium tracking-wide">Good morning, {(userProfile?.ownerName || 'User').split(' ')[0]}!</span>
-            <button 
+            <div 
               onClick={() => setIsShopSelectorOpen(!isShopSelectorOpen)}
               className="flex items-center gap-1 group active:opacity-70 transition-all cursor-pointer relative"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setIsShopSelectorOpen(!isShopSelectorOpen);
+                }
+              }}
             >
               <span className="text-white font-bold text-[14px] tracking-tight">{activeShop?.name || userProfile?.shopName || 'SpazaLink Shop'}</span>
               <ChevronDown size={14} className={cn("text-white/60 transition-transform", isShopSelectorOpen && "rotate-180")} />
@@ -372,7 +363,7 @@ export const HomeDashboard: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </button>
+            </div>
           </div>
 
           <button 

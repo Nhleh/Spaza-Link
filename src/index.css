@@ -42,20 +42,27 @@
 }
 
 @utility safe-area-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: 0;
 }
 
 @utility safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: 0;
 }
 
 @utility pb-safe {
-  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
 }
 
 @layer base {
+  html, body, #root {
+    @apply w-full h-full m-0 p-0 overflow-x-hidden;
+    height: 100dvh;
+  }
+  
   body {
     @apply font-sans bg-spaza-bg text-text-primary antialiased transition-colors duration-200;
+    /* Ensure content goes behind status bar */
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

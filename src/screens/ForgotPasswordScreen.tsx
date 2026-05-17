@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Loader2, CheckCircle } from 'lucide-react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { apiRequest } from '../lib/apiClient';
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -17,14 +16,13 @@ export const ForgotPasswordScreen: React.FC = () => {
     setError(null);
     
     try {
-      await sendPasswordResetEmail(auth, email);
+      await apiRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      });
       setSuccess(true);
     } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setError('No user found with this email address.');
-      } else {
-        setError(err.message || 'Failed to send reset email.');
-      }
+      setError(err.message || 'Failed to send reset email.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -32,7 +30,7 @@ export const ForgotPasswordScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col px-6 py-12">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col px-6 pt-[env(safe-area-inset-top,2rem)] pb-12">
       <button onClick={() => navigate(-1)} className="mb-8 w-10 h-10 bg-card-bg rounded-xl border border-border-custom flex items-center justify-center">
         <ArrowLeft size={20} className="text-text-primary" />
       </button>

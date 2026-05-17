@@ -105,6 +105,10 @@
     "/notifications/{notificationId}": {
       "schema": "notification",
       "description": "User notifications"
+    },
+    "/mail/{mailId}": {
+      "schema": "object",
+      "description": "Email queue for Trigger Email extension"
     }
   }
 }

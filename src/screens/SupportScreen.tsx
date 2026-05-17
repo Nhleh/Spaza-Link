@@ -14,8 +14,8 @@ export const SupportScreen: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col pt-4">
-      <header className="px-6 flex items-center mb-8 gap-4">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col pt-0">
+      <header className="px-6 pt-[env(safe-area-inset-top,2rem)] flex items-center mb-8 gap-4">
         <button onClick={() => navigate(-1)} className="w-10 h-10 bg-card-bg rounded-xl shadow-sm border border-border-custom flex items-center justify-center active:scale-95 transition-transform">
             <ArrowLeft size={20} className="text-spaza-green" />
         </button>

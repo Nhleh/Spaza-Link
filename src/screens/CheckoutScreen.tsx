@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { cn } from '../lib/utils';
-import { serverTimestamp } from 'firebase/firestore';
 
 export const CheckoutScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -46,8 +45,6 @@ export const CheckoutScreen: React.FC = () => {
         deliveryFee,
         paymentMethod,
         status: 'Order Confirmed',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
       });
 
       clearCart();
@@ -61,8 +58,8 @@ export const CheckoutScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col">
-      <header className="bg-spaza-green pt-12 pb-6 px-6 rounded-b-[28px] flex items-center gap-4 shadow-lg shadow-black/5">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col">
+      <header className="bg-spaza-green pt-[env(safe-area-inset-top,2rem)] pb-6 px-6 flex items-center gap-4 shadow-lg shadow-black/5">
         <button 
           onClick={() => navigate(-1)} 
           className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center active:scale-95 transition-transform"

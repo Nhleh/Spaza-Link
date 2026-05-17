@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, ShoppingBag, Tag, CreditCard, Calendar, Loader2 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
-import { auth, db } from '../lib/firebase';
-import { query, collection, where, onSnapshot, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
+import { apiRequest } from '../lib/apiClient';
 import { cn } from '../lib/utils';
 
 export const NotificationsScreen: React.FC = () => {
@@ -11,25 +11,20 @@ export const NotificationsScreen: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchNotifications = async () => {
+    try {
+      const data = await firebaseService.getCollection('notifications');
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!auth.currentUser) return;
-
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setNotifications(msgs);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    fetchNotifications();
   }, []);
 
   const markAllAsRead = async () => {
@@ -39,12 +34,15 @@ export const NotificationsScreen: React.FC = () => {
     if (unread.length === 0) return;
 
     try {
-      const batch = writeBatch(db);
-      unread.forEach(n => {
-        const ref = doc(db, 'notifications', n.id);
-        batch.update(ref, { isRead: true });
+      await apiRequest('/api/data-bulk/notifications/update', {
+        method: 'POST',
+        body: JSON.stringify({
+          ids: unread.map(n => n.id),
+          data: { isRead: true }
+        })
       });
-      await batch.commit();
+      // Refresh local state
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -77,8 +75,8 @@ export const NotificationsScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-spaza-bg flex flex-col pt-4 safe-area-top">
-      <header className="px-6 flex items-center justify-between mb-8 mt-2">
+    <div className="min-h-[100dvh] bg-spaza-bg flex flex-col pt-0">
+      <header className="px-6 pt-[env(safe-area-inset-top,2rem)] flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-2 bg-card-bg rounded-lg shadow-sm border border-border-custom">
                 <ArrowLeft size={20} className="text-spaza-green" />
@@ -122,7 +120,7 @@ export const NotificationsScreen: React.FC = () => {
                         {!n.isRead && <div className="w-1.5 h-1.5 bg-spaza-green rounded-full shrink-0 mt-1" />}
                       </div>
                       <p className="text-[10px] text-text-secondary font-medium mt-1">
-                        {n.createdAt && new Date(n.createdAt).toLocaleString()}
+                        {n.createdAt && (n.createdAt.toDate ? n.createdAt.toDate().toLocaleString() : new Date(n.createdAt).toLocaleString())}
                       </p>
                   </div>
               </div>
