@@ -57,7 +57,7 @@ export const CartScreen: React.FC = () => {
         </button>
       </header>
 
-      <div className="px-6 pt-8 space-y-4 mb-20 flex-1 overflow-y-auto">
+      <div className="px-6 pt-8 space-y-4 mb-20 flex-1 overflow-y-auto scrollbar-hide pb-10">
         <div className="flex justify-between items-center mb-2 px-1">
             <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">{totalItems} Items</span>
         </div>
@@ -65,38 +65,39 @@ export const CartScreen: React.FC = () => {
         {items.map((item) => (
             <div 
                key={item.id} 
-               className="bg-card-bg p-4 rounded-[24px] shadow-premium flex flex-col gap-4 border border-border-custom"
+               className="bg-card-bg p-4 rounded-[28px] shadow-premium flex flex-col gap-4 border border-border-custom active:scale-[0.99] transition-transform"
             >
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-spaza-bg rounded-2xl p-2 flex items-center justify-center shrink-0 border border-border-custom">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-spaza-bg rounded-2xl p-2 flex items-center justify-center shrink-0 border border-border-custom">
                         <img src={item.img} alt={item.name} className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h4 className="text-[14px] font-bold text-text-primary leading-tight truncate">{item.name}</h4>
-                        <p className="text-[11px] text-text-secondary font-medium mb-2">{item.unit}</p>
+                        <h4 className="text-[13px] sm:text-[14px] font-bold text-text-primary leading-tight truncate">{item.name}</h4>
+                        <p className="text-[10px] text-text-secondary font-medium mb-2">{item.unit}</p>
                         
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-bold text-text-primary">R{item.price.toFixed(2)}</span>
                             
-                            <div className="flex items-center bg-spaza-bg rounded-lg p-1 gap-3 border border-border-custom">
+                            <div className="flex items-center bg-spaza-bg rounded-lg p-1 gap-2 sm:gap-3 border border-border-custom">
                                 <button 
                                     onClick={() => updateQuantity(item.id, -1)}
-                                    className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-red-500"
+                                    className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-red-500 active:scale-90 transition-transform"
                                 >
-                                    <Minus size={16} strokeWidth={3} />
+                                    <Minus size={14} strokeWidth={3} />
                                 </button>
                                 <span className="text-xs font-bold text-text-primary w-4 text-center">{item.quantity}</span>
                                 <button 
                                     onClick={() => updateQuantity(item.id, 1)}
-                                    className="w-7 h-7 flex items-center justify-center text-text-secondary active:text-spaza-green"
+                                    className="w-7 h-7 flex items-center justify-center text-text-secondary active:text-spaza-green active:scale-90 transition-transform"
                                 >
-                                    <Plus size={16} strokeWidth={3} />
+                                    <Plus size={14} strokeWidth={3} />
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-end pt-2 border-t border-border-custom">
+                <div className="flex justify-between items-center pt-2 border-t border-border-custom">
+                    <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Item Total</span>
                     <span className="text-sm font-bold text-spaza-green">R{(item.price * item.quantity).toFixed(2)}</span>
                 </div>
             </div>
@@ -104,7 +105,7 @@ export const CartScreen: React.FC = () => {
       </div>
 
       {/* Summary Section */}
-      <div className="bg-card-bg rounded-t-[40px] p-8 shadow-[0_-20px_40px_-20px_rgba(0,0,0,0.1)] border-t border-border-custom pb-32">
+      <div className="bg-card-bg rounded-t-[40px] p-6 sm:p-8 shadow-[0_-20px_40px_-20px_rgba(0,0,0,0.1)] border-t border-border-custom pb-[calc(env(safe-area-inset-bottom,2rem)+80px)] shrink-0">
         <div className="space-y-4 mb-8">
             <div className="flex justify-between items-center text-sm">
                 <span className="text-text-secondary font-medium tracking-tight">Subtotal</span>

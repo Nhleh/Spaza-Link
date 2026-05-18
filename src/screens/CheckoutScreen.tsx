@@ -4,11 +4,13 @@ import { ArrowLeft, MapPin, Check, Truck, CreditCard, Banknote, Landmark, CheckC
 import { useCart } from '../context/CartContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from '../lib/firebase';
-import { firebaseService } from '../services/firebaseService';
+import { apiRequest } from '../lib/apiClient';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
 
 export const CheckoutScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { profile: userProfile } = useAuth();
   const { totalPrice, clearCart, items } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('pod');
   const [loading, setLoading] = useState(false);
@@ -30,10 +32,7 @@ export const CheckoutScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const orderId = `ORD-${Date.now()}`;
-      await firebaseService.saveDoc('orders', orderId, {
-        id: orderId,
-        userId: auth.currentUser.uid,
+      const orderData = {
         items: items.map(item => ({
           productId: item.id,
           name: item.name,
@@ -41,11 +40,17 @@ export const CheckoutScreen: React.FC = () => {
           price: item.price
         })),
         totalAmount: finalTotal,
-        subtotal: totalPrice,
-        deliveryFee,
         paymentMethod,
-        status: 'Order Confirmed',
+        deliveryAddress: userProfile?.location || 'Store Pickup',
+        shopName: userProfile?.shopName || 'My Shop'
+      };
+
+      const result = await apiRequest(`/api/orders`, {
+        method: 'POST',
+        body: JSON.stringify(orderData)
       });
+
+      const orderId = result.id;
 
       clearCart();
       navigate('/order-success', { state: { orderId } });
@@ -79,15 +84,21 @@ export const CheckoutScreen: React.FC = () => {
                 </div>
                 <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
-                        <h4 className="text-sm font-bold text-text-primary leading-tight">Thabo's SpazaLink Shop</h4>
+                        <h4 className="text-sm font-bold text-text-primary leading-tight">
+                          {userProfile?.activeShopId 
+                            ? (userProfile.shopName || "My Shop") 
+                            : (userProfile?.firstName ? `${userProfile.firstName}'s Shop` : "My SpazaLink Shop")}
+                        </h4>
                         <button 
-                          onClick={() => showToast('Address change coming soon!')}
+                          onClick={() => navigate('/profile', { state: { showAddresses: true } })}
                           className="text-spaza-green text-[11px] font-bold"
                         >
                           Change
                         </button>
                     </div>
-                    <p className="text-[11px] text-text-secondary font-medium leading-relaxed">123 Mthize Road, KwaMashu, Durban, 4360</p>
+                    <p className="text-[11px] text-text-secondary font-medium leading-relaxed">
+                      {userProfile?.location || "No address saved. Please update in profile."}
+                    </p>
                 </div>
             </div>
         </section>
@@ -177,7 +188,7 @@ export const CheckoutScreen: React.FC = () => {
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-card-bg border-t border-border-custom safe-area-bottom shadow-lg">
+      <div className="fixed bottom-16 left-0 right-0 p-6 bg-card-bg border-t border-border-custom safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)] z-40">
         <button 
           onClick={handlePlaceOrder}
           disabled={loading || items.length === 0}

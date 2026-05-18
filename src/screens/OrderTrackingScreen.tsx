@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, MapPin, Phone, MessageSquare, Truck, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
-import { firebaseService } from '../services/firebaseService';
+import { apiRequest } from '../lib/apiClient';
 
 export const OrderTrackingScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export const OrderTrackingScreen: React.FC = () => {
 
     const fetchOrder = async () => {
       try {
-        const data = await firebaseService.getDoc('orders', orderId);
+        const data = await apiRequest(`/api/data/orders/${orderId}`);
         if (data) {
           setOrderData(data);
         }

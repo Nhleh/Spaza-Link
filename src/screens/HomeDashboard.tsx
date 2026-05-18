@@ -4,20 +4,41 @@ import { Menu, Bell, ChevronDown, Rocket, Truck, ArrowRight, CheckCircle, Beer, 
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { firebaseService } from '../services/firebaseService';
 import { apiRequest } from '../lib/apiClient';
+import { useAuth } from '../context/AuthContext';
+import { NotificationPermissionPrompt } from '../components/NotificationPermissionPrompt';
 
 export const HomeDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { profile: userProfile, loading: authLoading, refreshProfile, isAdmin } = useAuth();
   const [toast, setToast] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [shops, setShops] = useState<any[]>([]);
   const [isShopSelectorOpen, setIsShopSelectorOpen] = useState(false);
   const [isSavingsModalOpen, setIsSavingsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
+  const menuItems = [
+    { icon: User, label: 'My Profile', path: '/profile' },
+    { icon: History, label: 'Order History', path: '/orders-history' },
+    { icon: Bell, label: 'Notifications', path: '/notifications' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: HelpCircle, label: 'Support', path: '/support' },
+  ];
+
+  if (isAdmin) {
+    menuItems.push({ icon: Rocket, label: 'Admin Console', path: '/admin' });
+  }
+
+  const greeting = React.useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 18) return 'Good afternoon';
+    return 'Good day';
+  }, []);
 
   const activeShop = React.useMemo(() => {
     if (!userProfile?.activeShopId) return shops[0] || null;
@@ -25,17 +46,15 @@ export const HomeDashboard: React.FC = () => {
   }, [shops, userProfile?.activeShopId]);
 
   useEffect(() => {
-    let unsubProfile: (() => void) | null = null;
-    let unsubShops: (() => void) | null = null;
-    let unsubNotifs: (() => void) | null = null;
+    if (!authLoading && !auth.currentUser) {
+      navigate('/login');
+    }
+  }, [authLoading, navigate]);
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+  useEffect(() => {
+    const fetchData = async () => {
+      if (userProfile) {
         try {
-          // Fetch user profile via backend
-          const profile = await apiRequest('/api/user/profile');
-          setUserProfile({ uid: user.uid, ...profile });
-          
           // Fetch user's shops via backend
           const shopsList = await apiRequest('/api/data/shops');
           setShops(shopsList);
@@ -43,21 +62,20 @@ export const HomeDashboard: React.FC = () => {
           // Fetch notifications via backend
           const notifs = await apiRequest('/api/data/notifications');
           setHasUnreadNotifications(notifs.some((n: any) => !n.isRead));
-
         } catch (error) {
           console.error('Error fetching dashboard data:', error);
         } finally {
           setLoading(false);
         }
-      } else {
-        navigate('/login');
+      } else if (!authLoading) {
+        // Only navigate if we're sure there's no profile and we're not loading anymore
+        // navigate('/login'); // Handled by Auth guard or on top level if needed
+        setLoading(false);
       }
-    });
-
-    return () => {
-      unsubscribeAuth();
     };
-  }, [navigate]);
+
+    fetchData();
+  }, [userProfile, authLoading]);
 
   const handleLogout = async () => {
     try {
@@ -76,11 +94,19 @@ export const HomeDashboard: React.FC = () => {
   const handleSwitchShop = async (shop: any) => {
     if (!userProfile) return;
     try {
-      await firebaseService.updateDoc('users', userProfile.uid, { 
+      const updateData = { 
         activeShopId: shop.id,
         shopName: shop.name,
         location: shop.address
+      };
+      await apiRequest('/api/user/profile', {
+        method: 'POST',
+        body: JSON.stringify(updateData)
       });
+      
+      // Refresh context profile to reflect changes without a full page reload
+      await refreshProfile();
+      
       setIsShopSelectorOpen(false);
       showToast(`Switched to ${shop.name}`);
     } catch (error) {
@@ -255,13 +281,7 @@ export const HomeDashboard: React.FC = () => {
               </div>
 
               <nav className="flex-1 px-4 space-y-1">
-                {[
-                  { icon: User, label: 'My Profile', path: '/profile' },
-                  { icon: History, label: 'Order History', path: '/orders-history' },
-                  { icon: Bell, label: 'Notifications', path: '/notifications' },
-                  { icon: Settings, label: 'Settings', path: '/settings' },
-                  { icon: HelpCircle, label: 'Support', path: '/support' },
-                ].map((item) => (
+                {menuItems.map((item) => (
                   <button
                     key={item.label}
                     onClick={() => {
@@ -301,7 +321,9 @@ export const HomeDashboard: React.FC = () => {
           </button>
           
           <div className="flex flex-col items-center">
-            <span className="text-white/80 text-[12px] font-medium tracking-wide">Good morning, {(userProfile?.ownerName || 'User').split(' ')[0]}!</span>
+            <span className="text-white/80 text-[12px] font-medium tracking-wide">
+              {greeting}, {userProfile?.firstName || (userProfile?.ownerName || auth.currentUser?.displayName || 'User').split(' ')[0]}!
+            </span>
             <div 
               onClick={() => setIsShopSelectorOpen(!isShopSelectorOpen)}
               className="flex items-center gap-1 group active:opacity-70 transition-all cursor-pointer relative"
@@ -380,6 +402,7 @@ export const HomeDashboard: React.FC = () => {
 
       {/* Main Sections */}
       <div className="px-6 mt-6 flex flex-col space-y-6 relative z-20">
+        <NotificationPermissionPrompt />
         {/* Savings Card */}
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
@@ -424,21 +447,21 @@ export const HomeDashboard: React.FC = () => {
             <h3 className="text-sm font-bold text-text-primary tracking-tight">Shop Now</h3>
             <button onClick={() => navigate('/catalog')} className="text-spaza-green text-[11px] font-bold tracking-widest uppercase">View all</button>
           </div>
-          <div className="grid grid-cols-4 gap-x-4 gap-y-6">
+          <div className="grid grid-cols-4 gap-x-2 gap-y-6 sm:gap-x-4">
             {categories.map((cat) => (
               <button 
                 key={cat.name}
                 onClick={() => navigate('/catalog', { state: { category: cat.name } })}
-                className="flex flex-col items-center gap-2 group"
+                className="flex flex-col items-center gap-2 group w-full"
               >
-                <div className="w-14 h-14 bg-card-bg rounded-xl shadow-premium flex items-center justify-center border border-border-custom group-active:scale-95 transition-all overflow-hidden p-2">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-card-bg rounded-xl shadow-premium flex items-center justify-center border border-border-custom group-active:scale-95 transition-all overflow-hidden p-2">
                   {cat.img ? (
                     <img src={cat.img} alt={cat.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   ) : (
-                    <cat.icon size={20} className={cat.color || "text-text-secondary"} />
+                    <cat.icon size={18} className={cat.color || "text-text-secondary"} />
                   )}
                 </div>
-                <span className="text-[10px] font-semibold text-text-secondary tracking-tight">{cat.name}</span>
+                <span className="text-[10px] font-semibold text-text-secondary tracking-tight truncate w-full text-center px-1">{cat.name}</span>
               </button>
             ))}
           </div>
@@ -450,22 +473,21 @@ export const HomeDashboard: React.FC = () => {
             <h3 className="text-sm font-bold text-text-primary tracking-tight">Top Deals for You</h3>
             <button onClick={() => navigate('/catalog')} className="text-spaza-green text-[11px] font-bold tracking-widest uppercase">View all</button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 scrollbar-hide">
+          <div className="grid grid-cols-3 gap-3">
             {deals.map((deal) => (
               <div 
                 key={deal.name}
                 onClick={() => navigate('/catalog')}
-                className="min-w-[140px] bg-card-bg p-4 rounded-[28px] shadow-sm border border-border-custom flex flex-col shrink-0 active:scale-98 transition-transform"
+                className="bg-card-bg p-3 rounded-2xl shadow-sm border border-border-custom flex flex-col items-center active:scale-[0.98] transition-transform text-center"
               >
-                <div className="w-full h-24 flex items-center justify-center p-2 mb-2">
+                <div className="w-full aspect-square flex items-center justify-center p-1 mb-1">
                   <img src={deal.img} alt={deal.name} className="w-full h-full object-contain drop-shadow-sm" />
                 </div>
-                <h4 className="text-[10px] font-bold text-text-secondary line-through">{deal.oldPrice}</h4>
-                <div className="flex justify-between items-end">
-                   <span className="text-[15px] font-bold text-text-primary tracking-tighter">{deal.price}</span>
-                   <span className="text-[10px] font-semibold text-text-secondary">2L</span>
+                <div className="w-full">
+                  <h4 className="text-[10px] font-bold text-text-secondary line-through block leading-none mb-0.5">{deal.oldPrice}</h4>
+                  <span className="text-[14px] font-black text-spaza-green block">{deal.price}</span>
+                  <h5 className="text-[10px] font-bold text-text-primary mt-1 leading-tight line-clamp-1">{deal.name}</h5>
                 </div>
-                <h5 className="text-[11px] font-bold text-text-primary mt-1 leading-tight">{deal.name}</h5>
               </div>
             ))}
           </div>

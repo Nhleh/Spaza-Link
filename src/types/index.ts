@@ -42,6 +42,8 @@ export interface UserProfile {
   phone?: string;
   shopName?: string;
   ownerName?: string;
+  firstName?: string;
+  lastName?: string;
   location?: string;
   lat?: number;
   lng?: number;

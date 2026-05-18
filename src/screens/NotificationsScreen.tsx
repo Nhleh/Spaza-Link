@@ -13,7 +13,7 @@ export const NotificationsScreen: React.FC = () => {
 
   const fetchNotifications = async () => {
     try {
-      const data = await firebaseService.getCollection('notifications');
+      const data = await apiRequest('/api/data/notifications');
       setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -50,7 +50,11 @@ export const NotificationsScreen: React.FC = () => {
 
   const markAsRead = async (id: string) => {
     try {
-      await firebaseService.updateDoc('notifications', id, { isRead: true });
+      await apiRequest(`/api/data/notifications/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ isRead: true })
+      });
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     } catch (error) {
       console.error('Error marking as read:', error);
     }

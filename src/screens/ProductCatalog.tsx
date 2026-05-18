@@ -110,56 +110,61 @@ export const ProductCatalog: React.FC = () => {
       </header>
 
       {/* Categories Tabs */}
-      <div className="px-6 flex gap-3 overflow-x-auto scrollbar-hide py-6">
-        {categories.map((cat) => (
-            <button 
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={cn(
-                    "px-6 py-2 rounded-full text-[13px] font-bold transition-all whitespace-nowrap",
-                    selectedCategory === cat 
-                        ? "bg-spaza-green text-white shadow-lg shadow-spaza-green/20" 
-                        : "bg-card-bg text-text-secondary border border-border-custom"
-                )}
-            >
-                {cat}
-            </button>
-        ))}
+      <div className="px-6 py-4">
+        <div className="grid grid-cols-4 gap-2">
+          {categories.map((cat) => (
+              <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                      "px-2 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all text-center border truncate",
+                      selectedCategory === cat 
+                          ? "bg-spaza-green text-white shadow-lg shadow-spaza-green/20 border-spaza-green" 
+                          : "bg-card-bg text-text-secondary border-border-custom"
+                  )}
+              >
+                  {cat}
+              </button>
+          ))}
+        </div>
       </div>
 
       {/* Product List */}
-      <div className="flex-1 px-6 space-y-4 pb-48">
+      <div className="flex-1 px-6 space-y-4 pb-48 overflow-y-auto scrollbar-hide">
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => {
             const cartItem = items.find(i => i.id === product.id);
             return (
               <div 
                 key={product.id} 
-                className="bg-card-bg p-4 rounded-[24px] shadow-premium flex items-center gap-4 active:scale-[0.98] transition-all border border-border-custom"
+                className="bg-card-bg p-4 rounded-[28px] shadow-premium flex items-center gap-3 sm:gap-4 active:scale-[0.98] transition-all border border-border-custom"
               >
                   {/* Product Image */}
-                  <div className="w-16 h-16 bg-spaza-bg rounded-2xl p-2 flex items-center justify-center shrink-0">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-spaza-bg rounded-2xl p-2 flex items-center justify-center shrink-0 border border-border-custom">
                       <img src={product.img} alt={product.name} className="w-full h-full object-contain" />
                   </div>
 
                   {/* Product Info */}
                   <div className="flex-1 min-w-0">
-                      <h4 className="text-[14px] font-bold text-text-primary leading-tight truncate">{product.name}</h4>
-                      <p className="text-[11px] text-text-secondary font-medium mb-1">{product.description}</p>
+                      <h4 className="text-[13px] sm:text-[14px] font-bold text-text-primary leading-tight truncate">{product.name}</h4>
+                      <p className="text-[10px] sm:text-[11px] text-text-secondary font-medium mb-1 truncate">{product.description}</p>
                       <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-text-primary">R{product.price.toFixed(2)}</span>
                       </div>
                   </div>
                   
                   {/* Stepper & Unit */}
-                  <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center bg-spaza-bg rounded-lg p-1 gap-3">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex items-center bg-spaza-bg rounded-lg p-1 gap-2 sm:gap-3 border border-border-custom">
                           <button 
                               disabled={!cartItem}
-                              onClick={() => updateQuantity(product.id, -1)}
-                              className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-red-500 disabled:opacity-30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, -1);
+                              }}
+                              className="w-7 h-7 flex items-center justify-center text-text-secondary hover:text-red-500 disabled:opacity-30 active:scale-90 transition-transform"
                           >
-                              <Minus size={16} strokeWidth={3} />
+                              <Minus size={14} strokeWidth={3} />
                           </button>
                           <span className="text-xs font-bold text-text-primary w-4 text-center">{cartItem?.quantity || 0}</span>
                           <button 
@@ -168,12 +173,12 @@ export const ProductCatalog: React.FC = () => {
                                 addToCart(product);
                                 showToast(`${product.name} added!`);
                               }}
-                              className="w-7 h-7 flex items-center justify-center text-text-secondary active:text-spaza-green"
+                              className="w-7 h-7 flex items-center justify-center text-text-secondary active:text-spaza-green active:scale-90 transition-transform"
                           >
-                              <Plus size={16} strokeWidth={3} />
+                              <Plus size={14} strokeWidth={3} />
                           </button>
                       </div>
-                      <span className="text-[9px] font-bold text-text-secondary">{product.unit}</span>
+                      <span className="text-[9px] font-bold text-text-secondary uppercase">{product.unit}</span>
                   </div>
               </div>
             )

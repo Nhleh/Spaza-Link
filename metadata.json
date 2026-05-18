@@ -2,8 +2,7 @@
   "name": "SpazaLink",
   "description": "Premium spaza grocery ordering platform with delivery at your doorstep.",
   "requestFramePermissions": [
-    "camera",
-    "geolocation"
+    "camera"
   ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

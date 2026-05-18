@@ -2,8 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { CartProvider } from './context/CartContext';
 import { BottomNav } from './components/BottomNav';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Screens
 import { SplashScreen } from './screens/SplashScreen';
@@ -24,6 +27,8 @@ import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { TermsScreen } from './screens/TermsScreen';
 import { PrivacyPolicyScreen } from './screens/PrivacyPolicyScreen';
 
+import { AdminDashboard } from './screens/AdminDashboard';
+
 const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <motion.div
@@ -31,7 +36,7 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="w-full h-full"
+      className="w-full flex-1 flex flex-col overflow-x-hidden"
     >
       {children}
     </motion.div>
@@ -40,29 +45,30 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const AppRoutes = () => {
   const location = useLocation();
-  const hideNav = ['/', '/splash', '/login', '/register', '/checkout', '/order-tracking'].includes(location.pathname);
+  const hideNav = ['/', '/splash', '/login', '/register', '/forgot-password', '/order-success'].includes(location.pathname);
 
   return (
-    <div className="w-full h-full min-h-[100dvh] bg-spaza-bg relative overflow-hidden flex flex-col">
+    <div className="w-full min-h-[100dvh] bg-spaza-bg relative flex flex-col">
       <AnimatePresence mode="wait">
         <Routes location={location}>
           <Route path="/" element={<PageWrapper><SplashScreen /></PageWrapper>} />
-          <Route path="/home" element={<PageWrapper><HomeDashboard /></PageWrapper>} />
+          <Route path="/home" element={<PageWrapper><ProtectedRoute><HomeDashboard /></ProtectedRoute></PageWrapper>} />
           <Route path="/login" element={<PageWrapper><LoginScreen /></PageWrapper>} />
           <Route path="/forgot-password" element={<PageWrapper><ForgotPasswordScreen /></PageWrapper>} />
           <Route path="/register" element={<PageWrapper><RegisterScreen /></PageWrapper>} />
-          <Route path="/catalog" element={<PageWrapper><ProductCatalog /></PageWrapper>} />
-          <Route path="/cart" element={<PageWrapper><CartScreen /></PageWrapper>} />
-          <Route path="/checkout" element={<PageWrapper><CheckoutScreen /></PageWrapper>} />
-          <Route path="/order-tracking" element={<PageWrapper><OrderTrackingScreen /></PageWrapper>} />
-          <Route path="/orders-history" element={<PageWrapper><OrderHistoryScreen /></PageWrapper>} />
-          <Route path="/notifications" element={<PageWrapper><NotificationsScreen /></PageWrapper>} />
-          <Route path="/profile" element={<PageWrapper><ProfileScreen /></PageWrapper>} />
-          <Route path="/support" element={<PageWrapper><SupportScreen /></PageWrapper>} />
-          <Route path="/settings" element={<PageWrapper><SettingsScreen /></PageWrapper>} />
+          <Route path="/catalog" element={<PageWrapper><ProtectedRoute><ProductCatalog /></ProtectedRoute></PageWrapper>} />
+          <Route path="/cart" element={<PageWrapper><ProtectedRoute><CartScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/checkout" element={<PageWrapper><ProtectedRoute><CheckoutScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/order-tracking" element={<PageWrapper><ProtectedRoute><OrderTrackingScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/orders-history" element={<PageWrapper><ProtectedRoute><OrderHistoryScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/notifications" element={<PageWrapper><ProtectedRoute><NotificationsScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/profile" element={<PageWrapper><ProtectedRoute><ProfileScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/support" element={<PageWrapper><ProtectedRoute><SupportScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/settings" element={<PageWrapper><ProtectedRoute><SettingsScreen /></ProtectedRoute></PageWrapper>} />
           <Route path="/terms" element={<PageWrapper><TermsScreen /></PageWrapper>} />
           <Route path="/privacy-policy" element={<PageWrapper><PrivacyPolicyScreen /></PageWrapper>} />
-          <Route path="/order-success" element={<PageWrapper><OrderSuccessScreen /></PageWrapper>} />
+          <Route path="/order-success" element={<PageWrapper><ProtectedRoute><OrderSuccessScreen /></ProtectedRoute></PageWrapper>} />
+          <Route path="/admin" element={<PageWrapper><ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute></PageWrapper>} />
         </Routes>
       </AnimatePresence>
       {!hideNav && <BottomNav />}
@@ -70,17 +76,17 @@ const AppRoutes = () => {
   );
 };
 
-import { ThemeProvider } from './context/ThemeContext';
-
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </CartProvider>
+        <NotificationProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </CartProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

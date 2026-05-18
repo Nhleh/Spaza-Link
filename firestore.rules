@@ -13,6 +13,10 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
     function incoming() {
       return request.resource.data;
     }
@@ -30,11 +34,17 @@ service cloud.firestore {
                data.uid == request.auth.uid &&
                data.email is string && data.email.size() <= 100;
       }
+
+      function isNotUpdatingRole() {
+        return !incoming().diff(existing()).affectedKeys().hasAny(['role']) || isAdmin();
+      }
       
-      allow get: if isOwner(userId) && isValidId(userId);
-      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && 
+                    (!('role' in incoming()) || incoming().role == 'customer' || isAdmin());
       allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && 
-                    incoming().diff(existing()).affectedKeys().hasOnly(['shopName', 'ownerName', 'location', 'photoUrl', 'phone', 'lat', 'lng', 'activeShopId']);
+                    isNotUpdatingRole() &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['shopName', 'ownerName', 'firstName', 'lastName', 'location', 'photoUrl', 'phone', 'lat', 'lng', 'activeShopId', 'updatedAt', 'addresses', 'paymentMethods', 'role', 'createdAt', 'uid', 'email']);
     }
 
     // --- Shops ---
@@ -56,7 +66,7 @@ service cloud.firestore {
     // --- Products ---
     match /products/{productId} {
       allow read: if true;
-      allow write: if isSignedIn(); // Allow authenticated users to seed products
+      allow write: if isAdmin();
     }
 
     // --- Orders ---
@@ -84,6 +94,12 @@ service cloud.firestore {
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid && isValidId(notificationId);
       allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
                     incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+    }
+
+    // --- FCM Tokens ---
+    match /fcmTokens/{tokenId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
     }
   }
 }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, MapPin, CreditCard, Lock, Bell, HelpCircle, LogOut, ChevronRight, Store, CheckCircle, AlertCircle, Loader2, Camera, X } from 'lucide-react';
+import { ArrowLeft, User, MapPin, CreditCard, Lock, Bell, HelpCircle, LogOut, ChevronRight, Store, CheckCircle, AlertCircle, Loader2, Camera, X, Phone } from 'lucide-react';
 import { auth } from '../lib/firebase';
-import { signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, updateProfile } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import { firebaseService } from '../services/firebaseService';
+import { apiRequest } from '../lib/apiClient';
 import { cn } from '../lib/utils';
-import { LocationPicker } from '../components/LocationPicker';
+import { useAuth } from '../context/AuthContext';
 
 import { UserProfile, Address, PaymentMethod, Shop } from '../types';
 import { Plus, Trash2, CreditCard as CardIcon, Eye, EyeOff, Building2 } from 'lucide-react';
@@ -18,13 +19,13 @@ export const ProfileScreen: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { profile: userProfile, setProfile: setUserProfile, refreshProfile, loading: authLoading } = useAuth();
+  const [shops, setShops] = useState<Shop[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shopPhotoInputRef = useRef<HTMLInputElement>(null);
   const [showShopInfo, setShowShopInfo] = useState(false);
   const [showShopsList, setShowShopsList] = useState(false);
   const [isAddingShop, setIsAddingShop] = useState(false);
-  const [shops, setShops] = useState<Shop[]>([]);
   const [showAddresses, setShowAddresses] = useState(false);
   const [showPayments, setShowPayments] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -56,39 +57,29 @@ export const ProfileScreen: React.FC = () => {
   }, [location.state]);
 
   useEffect(() => {
-    let unsubShops: (() => void) | null = null;
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+    const fetchData = async () => {
+      if (auth.currentUser && userProfile) {
         try {
-          const profile = await firebaseService.getDoc('users', user.uid);
-          setUserProfile(profile || { 
-            uid: user.uid, 
-            email: user.email, 
-            shopName: 'New SpazaLink Shop', 
-            ownerName: user.displayName || 'Spaza Owner',
-            location: 'Update your location',
-            role: 'customer',
-            createdAt: new Date().toISOString()
-          } as UserProfile);
-
           // Fetch user's shops via backend API
-          const shopsList = await firebaseService.getCollection('shops');
+          const shopsList = await apiRequest('/api/data/shops');
           setShops(shopsList || []);
-
         } catch (error) {
-          console.error('Error fetching profile:', error);
+          console.error('Error fetching additional profile data:', error);
         } finally {
           setLoading(false);
         }
-      } else {
-        navigate('/login');
+      } else if (!authLoading) {
+        if (!auth.currentUser) {
+          navigate('/login');
+        } else {
+          // Logged in but no profile doc - this is the "it says to upload profile" state
+          setLoading(false);
+        }
       }
-    });
-
-    return () => {
-      unsubscribeAuth();
     };
-  }, [navigate]);
+
+    fetchData();
+  }, [authLoading, userProfile, navigate]);
 
   const handleAddShop = async () => {
     if (!auth.currentUser || !newShop.name || !newShop.address) {
@@ -111,20 +102,27 @@ export const ProfileScreen: React.FC = () => {
       };
 
       const shopId = Math.random().toString(36).substr(2, 9);
-      await firebaseService.saveDoc('shops', shopId, shopData);
+      await apiRequest(`/api/data/shops/${shopId}`, {
+        method: 'POST',
+        body: JSON.stringify(shopData)
+      });
       
       // If no active shop, set this as active
       if (!userProfile?.activeShopId) {
-        await firebaseService.updateDoc('users', auth.currentUser.uid, {
-          activeShopId: shopId,
-          shopName: shopData.name,
-          location: shopData.address
+        await apiRequest('/api/user/profile', {
+          method: 'POST',
+          body: JSON.stringify({
+            activeShopId: shopId,
+            shopName: shopData.name,
+            location: shopData.address
+          })
         });
       }
 
       // Refresh shops list
-      const updatedShops = await firebaseService.getCollection('shops');
+      const updatedShops = await apiRequest('/api/data/shops');
       setShops(updatedShops || []);
+      await refreshProfile();
 
       showToast('Shop added successfully!', 'success');
       setIsAddingShop(false);
@@ -170,13 +168,14 @@ export const ProfileScreen: React.FC = () => {
         const base64 = reader.result as string;
         try {
           setLoading(true);
-          await firebaseService.updateDoc('users', auth.currentUser!.uid, {
-            photoUrl: base64
+          await apiRequest('/api/user/profile', {
+            method: 'POST',
+            body: JSON.stringify({ photoUrl: base64 })
           });
-          setUserProfile({ ...userProfile, photoUrl: base64 });
+          setUserProfile((prev: any) => ({ ...prev, photoUrl: base64 }));
           showToast('Photo updated successfully!', 'success');
-        } catch (error) {
-          showToast('Failed to upload photo', 'error');
+        } catch (error: any) {
+          showToast(error.message || 'Failed to upload photo', 'error');
         } finally {
           setLoading(false);
         }
@@ -201,23 +200,46 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || !userProfile) return;
     
     try {
       setLoading(true);
-      await firebaseService.updateDoc('users', auth.currentUser.uid, {
+      const updateData = {
         shopName: userProfile.shopName,
-        ownerName: userProfile.ownerName,
+        ownerName: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || userProfile.ownerName,
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
         location: userProfile.location,
-        lat: userProfile.lat,
-        lng: userProfile.lng,
-        phone: userProfile.phone
+        lat: userProfile.lat || 0,
+        lng: userProfile.lng || 0,
+        phone: userProfile.phone || ''
+      };
+
+      await apiRequest('/api/user/profile', {
+        method: 'POST',
+        body: JSON.stringify(updateData)
       });
+      
+      console.log('Profile saved to backend, updating local auth...');
+
+      // Update Auth display name
+      if (updateData.ownerName && auth.currentUser) {
+        try {
+          await updateProfile(auth.currentUser, { displayName: updateData.ownerName });
+        } catch (authError) {
+          console.warn('Failed to update Firebase Auth display name, but profile was saved:', authError);
+        }
+      }
+
+      console.log('Refreshing profile in context...');
+      await refreshProfile();
+      
       setIsEditing(false);
       setShowShopInfo(false);
       showToast('Profile updated successfully!', 'success');
-    } catch (error) {
-      showToast('Failed to update profile.', 'error');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      showToast(error.message || 'Failed to update profile.', 'error');
     } finally {
       setLoading(false);
     }
@@ -227,13 +249,15 @@ export const ProfileScreen: React.FC = () => {
     if (!auth.currentUser || !userProfile) return;
     try {
       setLoading(true);
-      await firebaseService.updateDoc('users', auth.currentUser.uid, {
-        addresses: newAddresses
+      await apiRequest('/api/user/profile', {
+        method: 'POST',
+        body: JSON.stringify({ addresses: newAddresses })
       });
-      setUserProfile({ ...userProfile, addresses: newAddresses });
+      await refreshProfile();
+      setUserProfile((prev: any) => ({ ...prev, addresses: newAddresses }));
       showToast('Addresses updated!', 'success');
-    } catch (error) {
-      showToast('Failed to update addresses', 'error');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update addresses', 'error');
     } finally {
       setLoading(false);
     }
@@ -243,13 +267,15 @@ export const ProfileScreen: React.FC = () => {
     if (!auth.currentUser || !userProfile) return;
     try {
       setLoading(true);
-      await firebaseService.updateDoc('users', auth.currentUser.uid, {
-        paymentMethods: newPayments
+      await apiRequest('/api/user/profile', {
+        method: 'POST',
+        body: JSON.stringify({ paymentMethods: newPayments })
       });
-      setUserProfile({ ...userProfile, paymentMethods: newPayments });
+      await refreshProfile();
+      setUserProfile((prev: any) => ({ ...prev, paymentMethods: newPayments }));
       showToast('Payment methods updated!', 'success');
-    } catch (error) {
-      showToast('Failed to update payment methods', 'error');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update payment methods', 'error');
     } finally {
       setLoading(false);
     }
@@ -340,86 +366,161 @@ export const ProfileScreen: React.FC = () => {
         <h2 className="text-lg font-bold text-text-primary">Account</h2>
       </header>
 
-      <div className="px-6 py-8 space-y-8 flex-1 overflow-y-auto pb-40">
+      <div className="px-6 py-4 space-y-4 flex-1 overflow-y-auto pb-40 scrollbar-hide">
         {/* Profile Card */}
-        <div className="bg-card-bg p-6 rounded-[32px] shadow-premium flex flex-col items-center text-center border border-border-custom">
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-24 h-24 rounded-full bg-spaza-bg overflow-hidden border-4 border-spaza-bg shadow-md mb-4 relative group cursor-pointer"
-            >
-                <img 
-                  src={userProfile?.photoUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200"} 
-                  alt="profile" 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100">
-                  <Camera size={20} />
-                </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handlePhotoUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-            </div>
-
-            {isEditing ? (
-              <div className="w-full space-y-4 mb-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-spaza-bg border border-border-custom rounded-xl px-4 py-2">
-                    <Store size={18} className="text-text-secondary" />
-                    <input 
-                      type="text" 
-                      value={userProfile?.shopName || ''}
-                      onChange={(e) => setUserProfile({...userProfile, shopName: e.target.value})}
-                      className="flex-1 bg-transparent text-sm font-bold outline-none text-text-primary"
-                      placeholder="Shop Name"
-                    />
+        {userProfile ? (
+          <div className="bg-card-bg p-4 rounded-[28px] shadow-premium flex flex-col items-center text-center border border-border-custom">
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-20 h-20 rounded-full bg-spaza-bg overflow-hidden border-2 border-spaza-bg shadow-sm mb-3 relative group cursor-pointer"
+              >
+                  <img 
+                    src={userProfile?.photoUrl || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200"} 
+                    alt="profile" 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100">
+                    <Camera size={18} />
                   </div>
-                  <div className="flex items-center gap-3 bg-spaza-bg border border-border-custom rounded-xl px-4 py-2">
-                    <User size={18} className="text-text-secondary" />
-                    <input 
-                      type="text" 
-                      value={userProfile?.ownerName || ''}
-                      onChange={(e) => setUserProfile({...userProfile, ownerName: e.target.value})}
-                      className="flex-1 bg-transparent text-sm font-medium outline-none text-text-primary"
-                      placeholder="Owner Name"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setIsEditing(false)}
-                    className="flex-1 text-text-secondary text-sm font-bold bg-spaza-bg px-6 py-2 rounded-xl active:scale-95 transition-transform"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleSaveProfile}
-                    disabled={loading}
-                    className="flex-1 text-white text-sm font-bold bg-spaza-green px-6 py-2 rounded-xl active:scale-95 transition-transform flex items-center justify-center"
-                  >
-                    {loading ? <Loader2 className="animate-spin" size={16} /> : 'Save'}
-                  </button>
-                </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handlePhotoUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
               </div>
-            ) : (
-              <>
-                <h3 className="text-lg font-bold text-text-primary tracking-tight leading-tight">{userProfile?.shopName}</h3>
-                <p className="text-sm text-text-secondary font-medium mb-4">{userProfile?.location}</p>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="text-spaza-green text-sm font-bold bg-spaza-green/10 px-6 py-2 rounded-xl border border-spaza-green/10 active:scale-95 transition-transform"
-                  >
-                    Edit Profile
-                  </button>
+
+              {isEditing ? (
+                <div className="w-full space-y-3 mb-2">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                       <div className="flex-1 flex items-center gap-2 bg-spaza-bg border border-border-custom rounded-xl px-3 py-2">
+                        <User size={16} className="text-text-secondary shrink-0" />
+                        <input 
+                          type="text" 
+                          value={userProfile?.firstName || ''}
+                          onChange={(e) => setUserProfile({...userProfile, firstName: e.target.value})}
+                          className="flex-1 bg-transparent text-sm font-medium outline-none text-text-primary w-full"
+                          placeholder="First Name"
+                        />
+                      </div>
+                      <div className="flex-1 flex items-center gap-2 bg-spaza-bg border border-border-custom rounded-xl px-3 py-2">
+                        <input 
+                          type="text" 
+                          value={userProfile?.lastName || ''}
+                          onChange={(e) => setUserProfile({...userProfile, lastName: e.target.value})}
+                          className="flex-1 bg-transparent text-sm font-medium outline-none text-text-primary w-full"
+                          placeholder="Last Name"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 bg-spaza-bg border border-border-custom rounded-xl px-3 py-2">
+                      <Store size={16} className="text-text-secondary shrink-0" />
+                      <input 
+                        type="text" 
+                        value={userProfile?.shopName || ''}
+                        onChange={(e) => setUserProfile({...userProfile, shopName: e.target.value})}
+                        className="flex-1 bg-transparent text-sm font-bold outline-none text-text-primary"
+                        placeholder="Shop Name"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-spaza-bg border border-border-custom rounded-xl px-3 py-2">
+                      <Phone size={16} className="text-text-secondary shrink-0" />
+                      <input 
+                        type="tel" 
+                        value={userProfile?.phone || ''}
+                        onChange={(e) => setUserProfile({...userProfile, phone: e.target.value})}
+                        className="flex-1 bg-transparent text-sm font-medium outline-none text-text-primary"
+                        placeholder="Phone Number"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1 text-left">
+                      <label className="text-[9px] font-black text-text-secondary uppercase ml-1 tracking-widest">Shop Location</label>
+                      <div className="bg-spaza-bg border border-border-custom rounded-xl px-3 py-2">
+                        <textarea 
+                          value={userProfile?.location || ''}
+                          onChange={(e) => setUserProfile({
+                            ...userProfile!,
+                            location: e.target.value
+                          })}
+                          className="w-full bg-transparent text-sm font-medium outline-none text-text-primary resize-none min-h-[60px]"
+                          placeholder="Enter shop address manually"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="flex-1 text-text-secondary text-xs font-bold bg-spaza-bg px-4 py-2.5 rounded-xl active:scale-95 transition-transform"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleSaveProfile}
+                      disabled={loading}
+                      className="flex-1 text-white text-xs font-bold bg-spaza-green px-4 py-2.5 rounded-xl active:scale-95 transition-transform flex items-center justify-center"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={14} /> : 'Save Profile'}
+                    </button>
+                  </div>
                 </div>
-              </>
-            )}
-        </div>
+              ) : (
+                <>
+                  <h3 className="text-base font-bold text-text-primary tracking-tight leading-tight">
+                    {userProfile?.firstName} {userProfile?.lastName}
+                  </h3>
+                  <p className="text-[10px] text-text-secondary font-black uppercase tracking-[0.15em] mt-0.5">{userProfile?.shopName}</p>
+                  <p className="text-[11px] text-text-secondary font-medium mb-3 line-clamp-1 opacity-70 px-4">{userProfile?.location}</p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsEditing(true)}
+                      className="text-spaza-green text-[11px] font-black uppercase tracking-widest bg-spaza-green/10 px-6 py-2 rounded-xl border border-spaza-green/10 active:scale-95 transition-transform"
+                    >
+                      Edit Account
+                    </button>
+                  </div>
+                </>
+              )}
+          </div>
+
+        ) : (
+          <div className="bg-card-bg p-6 rounded-[28px] shadow-premium text-center border border-border-custom space-y-4">
+            <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
+              <AlertCircle size={24} className="text-amber-500" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-text-primary">Profile Incomplete</h3>
+              <p className="text-xs text-text-secondary mt-1">Complete your profile to start ordering.</p>
+            </div>
+            <button 
+              onClick={() => {
+                const names = (auth.currentUser?.displayName || 'User').trim().split(/\s+/);
+                setUserProfile({
+                  uid: auth.currentUser!.uid,
+                  email: auth.currentUser!.email || '',
+                  shopName: '',
+                  ownerName: auth.currentUser?.displayName || 'User',
+                  firstName: names[0],
+                  lastName: names.slice(1).join(' '),
+                  location: '',
+                  phone: '',
+                  role: 'customer',
+                  createdAt: new Date().toISOString()
+                } as UserProfile);
+                setIsEditing(true);
+              }}
+              className="w-full bg-spaza-green text-white font-black py-3.5 rounded-2xl shadow-lg active:scale-95 transition-all text-xs uppercase tracking-widest"
+            >
+              Set Up Profile
+            </button>
+          </div>
+        )}
 
         <AnimatePresence>
           {showPasswordModal && (
@@ -534,60 +635,59 @@ export const ProfileScreen: React.FC = () => {
                 </button>
               </header>
 
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 pb-32">
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 pb-32">
                 {shops.length > 0 ? (
                   shops.map((shop) => (
                     <div key={shop.id} className={cn(
-                      "p-5 rounded-[28px] border transition-all flex items-center gap-4 shadow-sm",
+                      "p-4 rounded-[24px] border transition-all flex items-center gap-3 shadow-sm",
                       userProfile?.activeShopId === shop.id 
                         ? "bg-spaza-green/5 border-spaza-green shadow-spaza-green/10" 
                         : "bg-card-bg border-border-custom"
                     )}>
-                      <div className="w-14 h-14 rounded-2xl bg-spaza-bg overflow-hidden border border-border-custom flex-shrink-0">
+                      <div className="w-12 h-12 rounded-xl bg-spaza-bg overflow-hidden border border-border-custom flex-shrink-0">
                         {shop.photoUrl ? (
                           <img src={shop.photoUrl} alt={shop.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-spaza-green">
-                            <Store size={24} />
+                            <Store size={20} />
                           </div>
                         )}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-sm font-bold text-text-primary">{shop.name}</h4>
+                          <h4 className="text-[13px] font-bold text-text-primary truncate pr-2">{shop.name}</h4>
                           {userProfile?.activeShopId === shop.id && (
-                            <span className="text-[10px] font-black uppercase text-spaza-green bg-spaza-green/10 px-2 py-0.5 rounded-full">Active</span>
+                            <span className="text-[9px] font-black uppercase text-spaza-green bg-spaza-green/10 px-2 py-0.5 rounded-full shrink-0">Active</span>
                           )}
                         </div>
-                        <p className="text-[11px] text-text-secondary line-clamp-1 mt-0.5">{shop.address}</p>
-                        <div className="flex items-center gap-4 mt-3">
-                          <p className="text-[10px] font-bold text-text-secondary">Manager: <span className="text-text-primary">{shop.managerName || 'Owner'}</span></p>
+                        <p className="text-[10px] text-text-secondary line-clamp-1 mt-0.5">{shop.address}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-[9px] font-bold text-text-secondary">Mgr: <span className="text-text-primary">{shop.managerName || 'Owner'}</span></p>
                           <button 
                             onClick={async () => {
                               try {
-                                await firebaseService.updateDoc('users', auth.currentUser!.uid, {
+                                const updateData = {
                                   activeShopId: shop.id,
                                   shopName: shop.name,
                                   location: shop.address
+                                };
+                                await apiRequest('/api/user/profile', {
+                                  method: 'POST',
+                                  body: JSON.stringify(updateData)
                                 });
-                                setUserProfile({ 
-                                  ...userProfile as UserProfile, 
-                                  activeShopId: shop.id,
-                                  shopName: shop.name,
-                                  location: shop.address
-                                });
+                                await refreshProfile();
                                 showToast(`${shop.name} is now active`, 'success');
                               } catch (e) {
                                 showToast('Failed to switch shop', 'error');
                               }
                             }}
                             className={cn(
-                              "text-[10px] font-black uppercase tracking-widest",
+                              "text-[9px] font-black uppercase tracking-widest",
                               userProfile?.activeShopId === shop.id ? "text-spaza-green opacity-50 cursor-default" : "text-spaza-green"
                             )}
                             disabled={userProfile?.activeShopId === shop.id}
                           >
-                            {userProfile?.activeShopId === shop.id ? 'Already Active' : 'Set as Active'}
+                            {userProfile?.activeShopId === shop.id ? '' : 'Activate'}
                           </button>
                         </div>
                       </div>
@@ -658,15 +758,14 @@ export const ProfileScreen: React.FC = () => {
 
                         <div className="space-y-1">
                           <label className="text-[11px] font-black text-text-secondary uppercase tracking-widest ml-1">Shop Address</label>
-                          <LocationPicker 
-                            initialAddress={newShop.address}
-                            onLocationSelect={(loc) => setNewShop({
-                              ...newShop,
-                              address: loc.address,
-                              lat: loc.lat,
-                              lng: loc.lng
-                            })}
-                          />
+                          <div className="bg-card-bg border border-border-custom rounded-2xl px-4 py-3">
+                            <textarea 
+                              value={newShop.address}
+                              onChange={(e) => setNewShop({...newShop, address: e.target.value})}
+                              className="w-full bg-transparent text-sm font-bold outline-none text-text-primary resize-none min-h-[80px]"
+                              placeholder="Enter complete shop address"
+                            />
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 gap-4">
@@ -957,16 +1056,15 @@ export const ProfileScreen: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Search Address</label>
-                        <LocationPicker 
-                          initialAddress={editingAddress.address}
-                          onLocationSelect={(loc) => setEditingAddress({
-                            ...editingAddress,
-                            address: loc.address,
-                            lat: loc.lat,
-                            lng: loc.lng
-                          })}
-                        />
+                        <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Manual Address</label>
+                        <div className="bg-card-bg border border-border-custom rounded-xl px-4 py-3">
+                          <textarea 
+                            value={editingAddress.address}
+                            onChange={(e) => setEditingAddress({...editingAddress, address: e.target.value})}
+                            className="w-full bg-transparent text-sm font-medium outline-none text-text-primary resize-none min-h-[80px]"
+                            placeholder="Enter delivery address manually"
+                          />
+                        </div>
                       </div>
 
                       <label className="flex items-center gap-3 p-4 bg-card-bg border border-border-custom rounded-xl cursor-pointer">
@@ -1002,43 +1100,44 @@ export const ProfileScreen: React.FC = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="space-y-4">
-            <h3 className="text-[13px] font-bold text-text-primary px-1 uppercase tracking-widest text-opacity-40">Account Settings</h3>
-            <div className="bg-card-bg rounded-[32px] shadow-premium border border-border-custom overflow-hidden divide-y divide-border-custom">
+        <div className="space-y-3">
+            <h3 className="text-[11px] font-black text-text-primary px-1 uppercase tracking-[0.2em] opacity-40">Account Settings</h3>
+            <div className="bg-card-bg rounded-[28px] shadow-premium border border-border-custom overflow-hidden divide-y divide-border-custom">
                 {menuItems.map((item, idx) => (
                     <button 
                         key={idx}
                         onClick={item.onClick}
-                        className="w-full px-6 py-5 flex items-center justify-between active:bg-spaza-bg transition-all"
+                        className="w-full px-5 py-4 flex items-center justify-between active:bg-spaza-bg transition-all"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-spaza-bg rounded-xl flex items-center justify-center text-text-secondary">
-                                <item.icon size={20} />
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-spaza-bg rounded-xl flex items-center justify-center text-text-secondary border border-border-custom">
+                                <item.icon size={18} />
                             </div>
-                            <span className="text-sm font-bold text-text-primary">{item.label}</span>
+                            <span className="text-xs font-bold text-text-primary tracking-tight">{item.label}</span>
                         </div>
-                        <ChevronRight size={18} className="text-text-secondary" />
+                        <ChevronRight size={16} className="text-text-secondary opacity-50" />
                     </button>
                 ))}
             </div>
         </div>
 
         {/* Support & Legal */}
-        <div className="space-y-4 pt-2">
-            <div className="bg-card-bg rounded-[32px] shadow-premium border border-border-custom overflow-hidden divide-y divide-border-custom">
+        <div className="space-y-3 pt-1">
+            <div className="bg-card-bg rounded-[28px] shadow-premium border border-border-custom overflow-hidden divide-y divide-border-custom">
                 <button 
                     onClick={() => handleLogout()}
-                    className="w-full px-6 py-5 flex items-center justify-between active:bg-red-50 transition-all text-red-500"
+                    className="w-full px-5 py-4 flex items-center justify-between active:bg-red-50 transition-all text-red-500"
                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
-                            <LogOut size={20} />
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
+                            <LogOut size={18} />
                         </div>
-                        <span className="text-sm font-semibold">Log out</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">Log out</span>
                     </div>
                 </button>
             </div>
         </div>
+
 
         <div className="text-center py-4">
           <p className="text-[10px] font-medium text-gray-300 uppercase tracking-widest">Version 1.0.4 • Build 82</p>

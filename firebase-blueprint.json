@@ -83,6 +83,19 @@
         "isRead": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "fcmToken": {
+      "title": "FCM Token",
+      "description": "Device registration token for push notifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "token": { "type": "string" },
+        "platform": { "type": "string" },
+        "deviceInfo": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "token", "updatedAt"]
     }
   },
   "firestore": {
@@ -105,6 +118,10 @@
     "/notifications/{notificationId}": {
       "schema": "notification",
       "description": "User notifications"
+    },
+    "/fcmTokens/{tokenId}": {
+      "schema": "fcmToken",
+      "description": "Stored FCM tokens for push notifications"
     },
     "/mail/{mailId}": {
       "schema": "object",
