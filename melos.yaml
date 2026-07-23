@@ -1,0 +1,147 @@
+name: spazalink
+repository: https://github.com/your-org/spazalink
+
+packages:
+  - apps/**
+  - packages/**
+
+command:
+  version:
+    workspaceChangelog: false
+
+scripts:
+  analyze:
+    run: melos exec -- flutter analyze
+    description: Run flutter analyze on all packages
+
+  test:
+    run: melos exec -- flutter test
+    description: Run tests on all packages
+
+  build_runner:
+    run: melos exec -- dart run build_runner build --delete-conflicting-outputs
+    description: Run build_runner on all packages
+
+  clean:
+    run: melos exec -- flutter clean
+    description: Clean all packages
+
+  get:
+    run: melos exec -- flutter pub get
+    description: Get dependencies for all packages
+
+  format:
+    run: melos exec -- dart format lib test
+    description: Format all Dart files
+
+  # ── Flavor run shortcuts ───────────────────────────────────────────────────
+
+  run:customer:dev:
+    run: flutter run --flavor dev -t lib/main_dev.dart
+    description: Run customer app (dev flavor, emulators)
+    packageFilters:
+      - name: spazalink_customer
+
+  run:customer:staging:
+    run: flutter run --flavor staging -t lib/main_staging.dart
+    description: Run customer app (staging flavor)
+    packageFilters:
+      - name: spazalink_customer
+
+  run:customer:prod:
+    run: flutter run --flavor prod -t lib/main_prod.dart
+    description: Run customer app (prod flavor)
+    packageFilters:
+      - name: spazalink_customer
+
+  run:admin:dev:
+    run: flutter run --flavor dev -t lib/main_dev.dart
+    description: Run admin app (dev flavor, emulators)
+    packageFilters:
+      - name: spazalink_admin
+
+  run:admin:staging:
+    run: flutter run --flavor staging -t lib/main_staging.dart
+    description: Run admin app (staging flavor)
+    packageFilters:
+      - name: spazalink_admin
+
+  run:admin:prod:
+    run: flutter run --flavor prod -t lib/main_prod.dart
+    description: Run admin app (prod flavor)
+    packageFilters:
+      - name: spazalink_admin
+
+  run:driver:dev:
+    run: flutter run --flavor dev -t lib/main_dev.dart
+    description: Run driver app (dev flavor, emulators)
+    packageFilters:
+      - name: spazalink_driver
+
+  run:driver:staging:
+    run: flutter run --flavor staging -t lib/main_staging.dart
+    description: Run driver app (staging flavor)
+    packageFilters:
+      - name: spazalink_driver
+
+  run:driver:prod:
+    run: flutter run --flavor prod -t lib/main_prod.dart
+    description: Run driver app (prod flavor)
+    packageFilters:
+      - name: spazalink_driver
+
+  # ── Flavor build shortcuts (APK) ───────────────────────────────────────────
+
+  build:customer:dev:
+    run: flutter build apk --flavor dev -t lib/main_dev.dart
+    description: Build customer APK (dev)
+    packageFilters:
+      - name: spazalink_customer
+
+  build:customer:staging:
+    run: flutter build apk --flavor staging -t lib/main_staging.dart
+    description: Build customer APK (staging)
+    packageFilters:
+      - name: spazalink_customer
+
+  build:customer:prod:
+    run: flutter build apk --flavor prod -t lib/main_prod.dart
+    description: Build customer APK (prod)
+    packageFilters:
+      - name: spazalink_customer
+
+  build:admin:dev:
+    run: flutter build apk --flavor dev -t lib/main_dev.dart
+    description: Build admin APK (dev)
+    packageFilters:
+      - name: spazalink_admin
+
+  build:admin:staging:
+    run: flutter build apk --flavor staging -t lib/main_staging.dart
+    description: Build admin APK (staging)
+    packageFilters:
+      - name: spazalink_admin
+
+  build:admin:prod:
+    run: flutter build apk --flavor prod -t lib/main_prod.dart
+    description: Build admin APK (prod)
+    packageFilters:
+      - name: spazalink_admin
+
+  build:driver:dev:
+    run: flutter build apk --flavor dev -t lib/main_dev.dart
+    description: Build driver APK (dev)
+    packageFilters:
+      - name: spazalink_driver
+
+  build:driver:staging:
+    run: flutter build apk --flavor staging -t lib/main_staging.dart
+    description: Build driver APK (staging)
+    packageFilters:
+      - name: spazalink_driver
+
+  build:driver:prod:
+    run: flutter build apk --flavor prod -t lib/main_prod.dart
+    description: Build driver APK (prod)
+    packageFilters:
+      - name: spazalink_driver

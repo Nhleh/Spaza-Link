@@ -1,0 +1,322 @@
+rules_version = '2';
+
+// SpazaLink Firestore Security Rules
+// Phase 2 — Role-based access control with offline-safe write guards.
+//
+// Roles: customer | admin | driver
+// Role source: JWT custom claim 'role' (set by Cloud Function in Phase 4).
+//              Falls back to Firestore users/{uid}.role when claim is absent.
+//
+// Money invariant: all monetary fields are stored as integer cents (no floats).
+// Minimum order enforced here AND server-side in Cloud Functions (Phase 4).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Prefer JWT custom claim (fast, no Firestore read).
+    // Falls back to Firestore users doc until Phase 4 sets the claim.
+    function userRole() {
+      return request.auth.token.role != null
+        ? request.auth.token.role
+        : get(/databases/$(database)/documents/users/$(uid())).data.get('role', 'customer');
+    }
+
+    function isAdmin() {
+      return isAuth() && userRole() == 'admin';
+    }
+
+    function isDriver() {
+      return isAuth() && userRole() == 'driver';
+    }
+
+    function isCustomer() {
+      return isAuth() && userRole() == 'customer';
+    }
+
+    function shopOwnerId(shopId) {
+      return get(/databases/$(database)/documents/shops/$(shopId)).data.ownerId;
+    }
+
+    function shopStatus(shopId) {
+      return get(/databases/$(database)/documents/shops/$(shopId)).data.status;
+    }
+
+    function isApprovedShop(shopId) {
+      return shopStatus(shopId) == 'approved';
+    }
+
+    // Returns true if 'field' was not changed in this write request.
+    function unchanged(field) {
+      return !(field in request.resource.data.diff(resource.data).affectedKeys());
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Users read their own doc; admins read all.
+      allow read: if isAuth() && (uid() == userId || isAdmin());
+
+      // Self-registration: uid must match, role must start as 'customer'.
+      allow create: if isAuth()
+                       && uid() == userId
+                       && request.resource.data.uid == userId
+                       && request.resource.data.role == 'customer';
+
+      // Users update their own doc but cannot change role or uid.
+      allow update: if isAuth()
+                       && uid() == userId
+                       && unchanged('role')
+                       && unchanged('uid');
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Shops ──────────────────────────────────────────────────────────────────
+
+    match /shops/{shopId} {
+      // Shop owner reads their own; admins and drivers can read any.
+      allow read: if isAuth() && (
+        resource.data.ownerId == uid() ||
+        isAdmin() ||
+        isDriver()
+      );
+
+      // Any customer can register a new shop; ownerId must match caller;
+      // status must start as 'pending'.
+      allow create: if isCustomer()
+                       && request.resource.data.ownerId == uid()
+                       && request.resource.data.status == 'pending';
+
+      // Owner can update basic info; cannot change status, ownerId, or approval fields.
+      // Admins can update anything.
+      allow update: if (isCustomer()
+                          && resource.data.ownerId == uid()
+                          && unchanged('status')
+                          && unchanged('ownerId')
+                          && unchanged('approvedBy')
+                          && unchanged('approvedAt'))
+                       || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Products ───────────────────────────────────────────────────────────────
+
+    match /products/{productId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Categories ─────────────────────────────────────────────────────────────
+
+    match /categories/{categoryId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Orders ─────────────────────────────────────────────────────────────────
+
+    match /orders/{orderId} {
+      // Customer sees their own orders; driver sees assigned; admin sees all.
+      allow read: if isAuth() && (
+        resource.data.customerId == uid() ||
+        resource.data.driverId == uid() ||
+        isAdmin()
+      );
+
+      // Customers create orders:
+      //   - customerId must match caller
+      //   - shop must be approved
+      //   - total must be >= R500 (50000 cents)
+      //   - localUUID must be present and 36 chars (UUID v4) for dedup
+      allow create: if isCustomer()
+                       && request.resource.data.customerId == uid()
+                       && isApprovedShop(request.resource.data.shopId)
+                       && request.resource.data.total is int
+                       && request.resource.data.total >= 50000
+                       && request.resource.data.localUUID is string
+                       && request.resource.data.localUUID.size() == 36;
+
+      // Admin updates any field; drivers can only update status + updatedAt.
+      allow update: if isAdmin()
+                       || (isDriver()
+                           && resource.data.driverId == uid()
+                           && request.resource.data.diff(resource.data)
+                              .affectedKeys()
+                              .hasOnly(['status', 'updatedAt']));
+
+      // Orders are immutable — never deleted.
+      allow delete: if false;
+    }
+
+    // ── Order Items ────────────────────────────────────────────────────────────
+
+    match /order_items/{itemId} {
+      // Customer reads items for their own orders (requires 1 extra Firestore read).
+      allow read: if isAuth() && (
+        isAdmin() ||
+        get(/databases/$(database)/documents/orders/$(resource.data.orderId))
+          .data.customerId == uid()
+      );
+
+      allow create: if isCustomer();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // ── Drivers ────────────────────────────────────────────────────────────────
+
+    match /drivers/{driverId} {
+      allow read: if isAuth() && (uid() == driverId || isAdmin());
+
+      allow create: if isAdmin();
+
+      // Driver can self-update only: location, availability, FCM tokens.
+      allow update: if isAdmin()
+                       || (isDriver()
+                           && uid() == driverId
+                           && request.resource.data.diff(resource.data)
+                              .affectedKeys()
+                              .hasOnly(['currentLocation', 'isAvailable', 'updatedAt', 'fcmTokens']));
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Deliveries ─────────────────────────────────────────────────────────────
+
+    match /deliveries/{deliveryId} {
+      allow read: if isAuth() && (
+        isAdmin() ||
+        resource.data.driverId == uid() ||
+        get(/databases/$(database)/documents/orders/$(resource.data.orderId))
+          .data.customerId == uid()
+      );
+
+      allow create: if isAdmin(); // Created by Cloud Function when order confirmed
+
+      // Driver updates only delivery-relevant fields.
+      allow update: if isAdmin()
+                       || (isDriver()
+                           && resource.data.driverId == uid()
+                           && request.resource.data.diff(resource.data)
+                              .affectedKeys()
+                              .hasOnly(['status', 'currentLocation', 'updatedAt',
+                                        'deliveredAt', 'proofPhotoUrl', 'signatureUrl']));
+
+      allow delete: if false;
+    }
+
+    // ── Payments ───────────────────────────────────────────────────────────────
+
+    match /payments/{paymentId} {
+      allow read: if isAuth() && (
+        resource.data.customerId == uid() || isAdmin()
+      );
+
+      allow create: if isCustomer() && request.resource.data.customerId == uid();
+
+      // Payment webhook updates are done via Cloud Functions (Phase 4).
+      allow update: if isAdmin();
+
+      allow delete: if false;
+    }
+
+    // ── Notifications ──────────────────────────────────────────────────────────
+
+    match /notifications/{notifId} {
+      // Users see their own notifications only.
+      allow read: if isAuth() && resource.data.userId == uid();
+
+      // Created by Cloud Functions (Phase 8).
+      allow create: if isAdmin();
+
+      // Users can only mark their own notifications as read.
+      allow update: if isAuth()
+                       && resource.data.userId == uid()
+                       && request.resource.data.diff(resource.data)
+                          .affectedKeys()
+                          .hasOnly(['isRead', 'readAt']);
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Promotions ─────────────────────────────────────────────────────────────
+
+    match /promotions/{promoId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Discounts ──────────────────────────────────────────────────────────────
+
+    match /discounts/{discountId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Banners ────────────────────────────────────────────────────────────────
+
+    match /banners/{bannerId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Support Tickets ────────────────────────────────────────────────────────
+
+    match /support_tickets/{ticketId} {
+      allow read: if isAuth() && (
+        resource.data.userId == uid() || isAdmin()
+      );
+
+      allow create: if isAuth()
+                       && request.resource.data.userId == uid();
+
+      // Users can append messages to their own tickets.
+      allow update: if isAdmin()
+                       || (isAuth()
+                           && resource.data.userId == uid()
+                           && request.resource.data.diff(resource.data)
+                              .affectedKeys()
+                              .hasOnly(['messages', 'updatedAt']));
+
+      allow delete: if false;
+    }
+
+    // ── Audit Logs ─────────────────────────────────────────────────────────────
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin(); // Also written by Cloud Functions (service account)
+      allow update, delete: if false; // Immutable
+    }
+
+    // ── Settings ───────────────────────────────────────────────────────────────
+
+    match /settings/{settingId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ── Bulk Aggregations ──────────────────────────────────────────────────────
+
+    match /bulk_aggregations/{aggId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Reports ────────────────────────────────────────────────────────────────
+
+    match /reports/{reportId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

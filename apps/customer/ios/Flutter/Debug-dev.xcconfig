@@ -1,0 +1,6 @@
+#include "Generated.xcconfig"
+#include "Debug.xcconfig"
+
+// Override bundle identifier for the dev flavor
+PRODUCT_BUNDLE_IDENTIFIER = com.spazalink.customer.dev
+FLUTTER_TARGET = lib/main_dev.dart

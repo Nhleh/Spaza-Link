@@ -1,0 +1,5 @@
+#include "Generated.xcconfig"
+#include "Release.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = com.spazalink.customer
+FLUTTER_TARGET = lib/main_prod.dart
