@@ -80,21 +80,23 @@ service firebase.storage {
 
     // ── Product Images (admin only) ───────────────────────────────────────────
 
-    match /product_images/{productId}/{filename} {
-      // NOTE: the Storage emulator does not populate request.auth, so an
-      // auth/admin check always denies here. We gate on file type + size only.
-      // For production, restore: `isAdmin() && isImageFile() && isUnder5MB()`.
+    // {allPaths=**} matches any depth, so uploads like product_images/<file>
+    // OR product_images/<id>/<file> both match.
+    // NOTE: the Storage emulator does not populate request.auth, so an
+    // auth/admin check always denies here. Open on the emulator; for production
+    // restore something like: `isAdmin() && isImageFile() && isUnder5MB()`.
+    match /product_images/{allPaths=**} {
       allow read: if true;
-      allow write: if true;  // emulator: no request.auth/resource; lock down for prod
+      allow write: if true;
     }
 
     // ── Category Icons (admin only) ───────────────────────────────────────────
 
-    match /category_icons/{categoryId}/{filename} {
-      // See product_images note — emulator has no request.auth. Type+size only.
-      // For production, restore: `isAdmin() && isImageFile() && isUnder2MB()`.
+    match /category_icons/{allPaths=**} {
+      // See product_images note — emulator has no request.auth; open for dev.
+      // For production restore: `isAdmin() && isImageFile() && isUnder2MB()`.
       allow read: if true;
-      allow write: if true;  // emulator: no request.auth/resource; lock down for prod
+      allow write: if true;
     }
 
     // ── Driver Photos ─────────────────────────────────────────────────────────
