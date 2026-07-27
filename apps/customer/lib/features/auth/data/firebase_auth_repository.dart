@@ -91,19 +91,126 @@ class FirebaseAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    // Customer app uses phone auth only; this is here to satisfy the interface.
-    throw const AuthException(
-      message: 'Email sign-in is not supported in the Customer App.',
-      code: 'unsupported',
-    );
+    if (!_isReady) throw AuthException.networkError();
+    try {
+      final result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final fbUser = result.user!;
+      final existing = await getUser(fbUser.uid);
+      if (existing != null) return existing;
+      // Auth account exists but the Firestore profile is missing — recreate it.
+      return createUser(UserModel(
+        uid: fbUser.uid,
+        phoneNumber: fbUser.phoneNumber ?? '',
+        email: fbUser.email,
+        role: AppConstants.roleCustomer,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ));
+    } on fb.FirebaseAuthException catch (e) {
+      throw AuthException.fromFirebase(e.code);
+    }
+  }
+
+  // ── Email / cellphone + password (Customer sign-up & sign-in) ───────────────
+
+  /// Builds the Firebase Auth credential email for a cellphone login.
+  /// e.g. 0821234567 → 27821234567@phone.spazalink.app
+  static String syntheticEmailForPhone(String phone) =>
+      '${normalizePhone(phone)}@phone.spazalink.app';
+
+  /// Normalises an SA number to digits in 27-prefixed form (no '+').
+  static String normalizePhone(String phone) {
+    var cleaned = phone.trim().replaceAll(RegExp(r'[\s\-()+]'), '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '27${cleaned.substring(1)}';
+    } else if (!cleaned.startsWith('27')) {
+      cleaned = '27$cleaned';
+    }
+    return cleaned;
+  }
+
+  /// Registers a new customer account with email/password auth.
+  ///
+  /// [useEmailLogin] decides the sign-in credential: the real [email] when
+  /// true, or a synthetic address derived from [phone] when false. The user's
+  /// real name, email and phone are always stored in their Firestore profile.
+  Future<UserModel> registerAccount({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required bool useEmailLogin,
+  }) async {
+    if (!_isReady) throw AuthException.networkError();
+    final authEmail =
+        useEmailLogin ? email.trim() : syntheticEmailForPhone(phone);
+
+    fb.User fbUser;
+    try {
+      final result = await _auth.createUserWithEmailAndPassword(
+        email: authEmail,
+        password: password,
+      );
+      fbUser = result.user!;
+    } on fb.FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        // A previous attempt already created this login. Recover it by signing
+        // in with the same password, then continue provisioning the profile.
+        try {
+          final result = await _auth.signInWithEmailAndPassword(
+            email: authEmail,
+            password: password,
+          );
+          fbUser = result.user!;
+        } on fb.FirebaseAuthException {
+          throw AuthException.phoneAlreadyInUse();
+        }
+      } else {
+        throw AuthException.fromFirebase(e.code);
+      }
+    }
+
+    // Ensure the Firestore profile exists (idempotent on retry).
+    final existing = await getUser(fbUser.uid);
+    if (existing != null) return existing;
+    return createUser(UserModel(
+      uid: fbUser.uid,
+      phoneNumber: normalizePhone(phone),
+      displayName: name.trim(),
+      email: email.trim(),
+      role: AppConstants.roleCustomer,
+      isActive: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  /// Signs in with either an email or a cellphone number, plus [password].
+  Future<UserModel> signInWithIdentifier({
+    required String identifier,
+    required String password,
+    required bool isEmail,
+  }) {
+    final authEmail =
+        isEmail ? identifier.trim() : syntheticEmailForPhone(identifier);
+    return signInWithEmailAndPassword(email: authEmail, password: password);
   }
 
   @override
   Future<UserModel?> getUser(String uid) async {
-    final doc = await _db
-        .collection(FirestoreConstants.colUsers)
-        .doc(uid)
-        .get();
+    final ref = _db.collection(FirestoreConstants.colUsers).doc(uid);
+    var doc = await ref.get();
+    // A profile just written (with offline persistence) may not have synced to
+    // the server yet — fall back to the local cache so it's still found.
+    if (!doc.exists) {
+      try {
+        doc = await ref.get(const GetOptions(source: Source.cache));
+      } catch (_) {}
+    }
     if (!doc.exists || doc.data() == null) return null;
     return _userFromMap(uid, doc.data()!);
   }
@@ -121,11 +228,19 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<ShopModel?> getShopByOwnerId(String ownerId) async {
-    final q = await _db
+    final query = _db
         .collection(FirestoreConstants.colShops)
         .where(FirestoreConstants.fldOwnerId, isEqualTo: ownerId)
-        .limit(1)
-        .get();
+        .limit(1);
+    var q = await query.get();
+    // A shop just created (with offline persistence) may not have synced to the
+    // server yet; a server query would miss it and bounce the user back to
+    // registration. Fall back to the local cache in that case.
+    if (q.docs.isEmpty) {
+      try {
+        q = await query.get(const GetOptions(source: Source.cache));
+      } catch (_) {}
+    }
     if (q.docs.isEmpty) return null;
     return _shopFromMap(q.docs.first.id, q.docs.first.data());
   }

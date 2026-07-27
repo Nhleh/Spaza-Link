@@ -23,12 +23,16 @@ service cloud.firestore {
       return request.auth.uid;
     }
 
-    // Prefer JWT custom claim (fast, no Firestore read).
-    // Falls back to Firestore users doc until Phase 4 sets the claim.
+    // Role comes from the user's Firestore doc. We deliberately do NOT read
+    // request.auth.token here: the Auth *emulator* often leaves token as null
+    // even when request.auth is set, and calling .get() on it throws. Reading
+    // the doc works for both apps and the emulator. Defaults to 'customer' when
+    // the doc doesn't exist yet (e.g. mid-registration) so writes never fail.
+    // (Only called from isAuth()-guarded helpers, so uid() is always safe.)
     function userRole() {
-      return request.auth.token.role != null
-        ? request.auth.token.role
-        : get(/databases/$(database)/documents/users/$(uid())).data.get('role', 'customer');
+      return exists(/databases/$(database)/documents/users/$(uid()))
+        ? get(/databases/$(database)/documents/users/$(uid())).data.get('role', 'customer')
+        : 'customer';
     }
 
     function isAdmin() {
@@ -91,15 +95,16 @@ service cloud.firestore {
         isDriver()
       );
 
-      // Any customer can register a new shop; ownerId must match caller;
-      // status must start as 'pending'.
-      allow create: if isCustomer()
+      // Any signed-in user can register their own shop; ownerId must match the
+      // caller and status must start as 'pending'. Uses isAuth() (not a role
+      // lookup) so self-registration can't be blocked by role/token quirks.
+      allow create: if isAuth()
                        && request.resource.data.ownerId == uid()
                        && request.resource.data.status == 'pending';
 
       // Owner can update basic info; cannot change status, ownerId, or approval fields.
       // Admins can update anything.
-      allow update: if (isCustomer()
+      allow update: if (isAuth()
                           && resource.data.ownerId == uid()
                           && unchanged('status')
                           && unchanged('ownerId')

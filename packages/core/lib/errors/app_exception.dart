@@ -18,8 +18,13 @@ final class AuthException extends AppException {
   const AuthException({required super.message, super.code});
 
   factory AuthException.invalidCredentials() => const AuthException(
-        message: 'Incorrect phone number or password.',
+        message: 'Incorrect email/phone or password.',
         code: 'invalid-credentials',
+      );
+
+  factory AuthException.accountNotFound() => const AuthException(
+        message: 'No account found. Please register first.',
+        code: 'account-not-found',
       );
 
   factory AuthException.userDisabled() => const AuthException(
@@ -58,8 +63,9 @@ final class AuthException extends AppException {
       );
 
   factory AuthException.fromFirebase(String code) => switch (code) {
-        'user-not-found' ||
-        'wrong-password' =>
+        'user-not-found' => AuthException.accountNotFound(),
+        'wrong-password' ||
+        'invalid-credential' =>
           AuthException.invalidCredentials(),
         'user-disabled' => AuthException.userDisabled(),
         'email-already-in-use' ||

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../providers/auth_provider.dart';
 
-/// 3-step shop registration: (1) About You → (2) Your Shop → (3) Submit
+/// 2-step shop registration: (1) Your Account → (2) Your Shop → Submit.
+///
+/// Step 1 creates the sign-in account (name, email, cellphone, password — sign
+/// in with email OR cellphone). Step 2 captures shop details; the shop's
+/// location is taken from the physical address — no manual GPS.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -18,20 +21,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
 
-  // Step 1 controllers
+  // Step 1 — account
   final _step1Key = GlobalKey<FormState>();
   final _ownerNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _useEmail = true;
 
-  // Step 2 controllers
+  // Step 2 — shop
   final _step2Key = GlobalKey<FormState>();
   final _shopNameController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   String? _province;
-
-  // Step 3 (optional GPS)
-  final _latController = TextEditingController();
-  final _lngController = TextEditingController();
 
   static const _provinces = [
     'Eastern Cape',
@@ -49,11 +52,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     _pageController.dispose();
     _ownerNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
     _shopNameController.dispose();
     _addressController.dispose();
     _cityController.dispose();
-    _latController.dispose();
-    _lngController.dispose();
     super.dispose();
   }
 
@@ -65,7 +69,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     };
     if (!valid) return;
 
-    if (_currentPage < 2) {
+    if (_currentPage < 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeInOut,
@@ -87,64 +91,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    final uid = ref.read(authUidProvider).valueOrNull;
-    if (uid == null) return;
-
-    GpsLocation? gps;
-    final lat = double.tryParse(_latController.text.trim());
-    final lng = double.tryParse(_lngController.text.trim());
-    if (lat != null && lng != null) {
-      gps = GpsLocation(latitude: lat, longitude: lng);
-    }
-
-    await ref.read(shopRegistrationProvider.notifier).register(
-          ownerId: uid,
-          ownerName: _ownerNameController.text.trim(),
+    final ok = await ref.read(authActionProvider.notifier).registerAccountAndShop(
+          name: _ownerNameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          password: _passwordController.text,
+          useEmailLogin: _useEmail,
           shopName: _shopNameController.text.trim(),
           physicalAddress: _addressController.text.trim(),
           city: _cityController.text.trim(),
           province: _province ?? '',
-          gpsLocation: gps,
         );
 
-    if (!mounted) return;
-    final state = ref.read(shopRegistrationProvider);
-    if (state.hasError) {
-      context.showErrorSnack(
-        (state.error is AppException)
-            ? (state.error as AppException).message
-            : 'Registration failed. Please try again.',
-      );
-    }
-    // On success, router redirect fires and takes to pendingApproval.
+    if (!mounted || ok) return;
+    // On success the router redirect takes over (→ pending approval).
+    final err = ref.read(authActionProvider).error;
+    context.showErrorSnack(
+      (err is AppException) ? err.message : 'Registration failed. Please try again.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final regState = ref.watch(shopRegistrationProvider);
-    final isLoading = regState.isLoading;
-
-    ref.listen(shopRegistrationProvider, (_, next) {
-      if (next.hasError) {
-        context.showErrorSnack(
-          (next.error is AppException)
-              ? (next.error as AppException).message
-              : 'Registration failed.',
-        );
-      }
-    });
+    final isLoading = ref.watch(authActionProvider).isLoading;
 
     return Scaffold(
       appBar: AppBar(
         leading: _currentPage > 0
             ? BackButton(onPressed: _prevPage)
-            : BackButton(onPressed: () => context.go(RouteConstants.login)),
-        title: Text('Register Your Shop'),
+            : BackButton(onPressed: () => context.go(RouteConstants.welcome)),
+        title: const Text('Register Your Shop'),
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(
-            value: (_currentPage + 1) / 3,
+            value: (_currentPage + 1) / 2,
             backgroundColor: AppColors.lightSurfaceVariant,
             valueColor: const AlwaysStoppedAnimation(AppColors.brandGreenPrimary),
             minHeight: 4,
@@ -153,7 +134,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
       body: LoadingOverlay(
         isLoading: isLoading,
-        message: 'Submitting…',
+        message: 'Creating your account…',
         child: PageView(
           controller: _pageController,
           physics: const NeverScrollableScrollPhysics(),
@@ -161,6 +142,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _StepOne(
               formKey: _step1Key,
               ownerNameController: _ownerNameController,
+              emailController: _emailController,
+              phoneController: _phoneController,
+              passwordController: _passwordController,
+              useEmail: _useEmail,
+              onLoginMethodChanged: (v) => setState(() => _useEmail = v),
             ),
             _StepTwo(
               formKey: _step2Key,
@@ -170,10 +156,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               province: _province,
               provinces: _provinces,
               onProvinceChanged: (v) => setState(() => _province = v),
-            ),
-            _StepThree(
-              latController: _latController,
-              lngController: _lngController,
             ),
           ],
         ),
@@ -187,7 +169,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             AppSpacing.xl,
           ),
           child: SpazaButton(
-            label: _currentPage < 2 ? 'Continue' : 'Submit Registration',
+            label: _currentPage < 1 ? 'Continue' : 'Submit Registration',
             onPressed: isLoading ? null : _nextPage,
             isLoading: isLoading,
             variant: SpazaButtonVariant.primary,
@@ -204,9 +186,19 @@ class _StepOne extends StatelessWidget {
   const _StepOne({
     required this.formKey,
     required this.ownerNameController,
+    required this.emailController,
+    required this.phoneController,
+    required this.passwordController,
+    required this.useEmail,
+    required this.onLoginMethodChanged,
   });
   final GlobalKey<FormState> formKey;
   final TextEditingController ownerNameController;
+  final TextEditingController emailController;
+  final TextEditingController phoneController;
+  final TextEditingController passwordController;
+  final bool useEmail;
+  final ValueChanged<bool> onLoginMethodChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -221,9 +213,9 @@ class _StepOne extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StepHeader(
-              step: '1 of 3',
-              title: 'About You',
-              subtitle: 'Tell us about the shop owner.',
+              step: '1 of 2',
+              title: 'Your Account',
+              subtitle: 'Create your sign-in details.',
             ),
             const SizedBox(height: AppSpacing.x3l),
 
@@ -235,7 +227,69 @@ class _StepOne extends StatelessWidget {
               keyboardType: TextInputType.name,
               textCapitalization: TextCapitalization.words,
               validator: Validators.ownerName,
+              textInputAction: TextInputAction.next,
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            SpazaTextField(
+              controller: emailController,
+              label: 'Email',
+              hint: 'you@example.com',
+              prefixIcon: Icons.email_rounded,
+              keyboardType: TextInputType.emailAddress,
+              validator: Validators.requiredEmail,
+              textInputAction: TextInputAction.next,
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            SpazaTextField(
+              controller: phoneController,
+              label: 'Cellphone number',
+              hint: '082 123 4567',
+              prefixIcon: Icons.phone_android_rounded,
+              keyboardType: TextInputType.phone,
+              validator: Validators.phone,
+              textInputAction: TextInputAction.next,
+            ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            SpazaTextField(
+              controller: passwordController,
+              label: 'Password',
+              hint: 'At least 8 characters',
+              prefixIcon: Icons.lock_rounded,
+              isPassword: true,
+              validator: Validators.password,
               textInputAction: TextInputAction.done,
+            ),
+
+            const SizedBox(height: AppSpacing.xl),
+
+            Text(
+              'Sign in using',
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.lightOnSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: true,
+                  label: Text('Email'),
+                  icon: Icon(Icons.email_rounded),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('Cellphone'),
+                  icon: Icon(Icons.phone_android_rounded),
+                ),
+              ],
+              selected: {useEmail},
+              onSelectionChanged: (s) => onLoginMethodChanged(s.first),
             ),
           ],
         ),
@@ -275,7 +329,7 @@ class _StepTwo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _StepHeader(
-              step: '2 of 3',
+              step: '2 of 2',
               title: 'Your Shop',
               subtitle: 'Where is your shop located?',
             ),
@@ -340,99 +394,6 @@ class _StepTwo extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _StepThree extends StatelessWidget {
-  const _StepThree({
-    required this.latController,
-    required this.lngController,
-  });
-  final TextEditingController latController;
-  final TextEditingController lngController;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xxl,
-        vertical: AppSpacing.x3l,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StepHeader(
-            step: '3 of 3',
-            title: 'Location (Optional)',
-            subtitle:
-                'Adding your GPS coordinates helps us route deliveries faster. You can skip this for now.',
-          ),
-
-          const SizedBox(height: AppSpacing.x3l),
-
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: AppColors.brandGreenSurface,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  color: AppColors.brandGreenDark,
-                  size: 20,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    'You can also add your location from your shop profile after approval.',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.brandGreenDark,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.x3l),
-
-          SpazaTextField(
-            controller: latController,
-            label: 'Latitude (optional)',
-            hint: 'e.g. -29.8587',
-            prefixIcon: Icons.my_location_rounded,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: true,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]')),
-            ],
-            textInputAction: TextInputAction.next,
-          ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          SpazaTextField(
-            controller: lngController,
-            label: 'Longitude (optional)',
-            hint: 'e.g. 31.0218',
-            prefixIcon: Icons.my_location_rounded,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: true,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]')),
-            ],
-            textInputAction: TextInputAction.done,
-          ),
-        ],
       ),
     );
   }

@@ -5,7 +5,7 @@ import '../data/firebase_auth_repository.dart';
 
 // ── Repository ─────────────────────────────────────────────────────────────────
 
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+final authRepositoryProvider = Provider<FirebaseAuthRepository>((ref) {
   return FirebaseAuthRepository();
 });
 
@@ -31,6 +31,101 @@ final currentShopProvider = FutureProvider<ShopModel?>((ref) async {
   if (uid == null) return null;
   return ref.watch(authRepositoryProvider).getShopByOwnerId(uid);
 });
+
+// ── Email / cellphone + password auth actions ───────────────────────────────────
+
+/// Drives sign-in and account registration, exposing a loading/error state
+/// the login and register screens can react to.
+class AuthActionNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  FirebaseAuthRepository get _repo => ref.read(authRepositoryProvider);
+
+  /// Signs in with an email or cellphone [identifier] plus [password].
+  /// Returns true on success; the router redirect handles navigation.
+  Future<bool> login({
+    required String identifier,
+    required String password,
+    required bool isEmail,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repo.signInWithIdentifier(
+        identifier: identifier,
+        password: password,
+        isEmail: isEmail,
+      );
+      state = const AsyncValue.data(null);
+      return true;
+    } on AppException catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    } catch (e, st) {
+      state = AsyncValue.error(
+        ServerException(message: 'Sign in failed: $e'),
+        st,
+      );
+      return false;
+    }
+  }
+
+  /// Creates the account (email/password auth + user profile) and the shop in
+  /// one step. [useEmailLogin] chooses email vs cellphone as the sign-in id.
+  Future<bool> registerAccountAndShop({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required bool useEmailLogin,
+    required String shopName,
+    required String physicalAddress,
+    required String city,
+    required String province,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final user = await _repo.registerAccount(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+        useEmailLogin: useEmailLogin,
+      );
+      // Don't create a duplicate shop if this account already registered one.
+      final existingShop = await _repo.getShopByOwnerId(user.uid);
+      if (existingShop == null) {
+        await _repo.createShop(ShopModel(
+          ownerId: user.uid,
+          shopName: shopName,
+          ownerName: name,
+          physicalAddress: physicalAddress,
+          city: city,
+          province: province,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
+      }
+      ref.invalidate(currentShopProvider);
+      state = const AsyncValue.data(null);
+      return true;
+    } on AppException catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return false;
+    } catch (e, st) {
+      state = AsyncValue.error(
+        ServerException(message: 'Registration failed: $e'),
+        st,
+      );
+      return false;
+    }
+  }
+}
+
+final authActionProvider =
+    NotifierProvider<AuthActionNotifier, AsyncValue<void>>(
+  AuthActionNotifier.new,
+);
 
 // ── Auth state notifier ────────────────────────────────────────────────────────
 

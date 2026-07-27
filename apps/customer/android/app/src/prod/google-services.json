@@ -1,0 +1,27 @@
+{
+  "_comment": "PLACEHOLDER — replace with real google-services.json from Firebase Console for project: spazalink-prod",
+  "_instructions": [
+    "1. Go to https://console.firebase.google.com/project/spazalink-prod/settings/general",
+    "2. Download google-services.json for the Android app com.spazalink.customer",
+    "3. Replace this file with the downloaded one"
+  ],
+  "project_info": {
+    "project_number": "TODO",
+    "project_id": "spazalink-prod",
+    "storage_bucket": "spazalink-prod.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "TODO",
+        "android_client_info": {
+          "package_name": "com.spazalink.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [{ "current_key": "TODO" }],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    }
+  ],
+  "configuration_version": "1"
+}

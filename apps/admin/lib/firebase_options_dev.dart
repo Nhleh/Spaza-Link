@@ -1,12 +1,12 @@
 // Firebase options for the DEV environment — admin app.
-// TODO: Run `flutterfire configure --project=spazalink-dev //              --out=lib/firebase_options_dev.dart`
-//       from apps/admin/ to populate real credentials.
+// Aligned to the shared dev Firebase project `spazalink-d8a59` (same project
+// the customer app uses) so the admin manages the same data.
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-const bool kFirebaseConfigured = false;
+const bool kFirebaseConfigured = true;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
@@ -18,7 +18,28 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web     = FirebaseOptions(apiKey: 'DEV_WEB_API_KEY',     appId: 'DEV_WEB_APP_ID',     messagingSenderId: 'DEV_SENDER_ID', projectId: 'spazalink-dev', storageBucket: 'spazalink-dev.firebasestorage.app');
-  static const FirebaseOptions android = FirebaseOptions(apiKey: 'DEV_ANDROID_API_KEY', appId: 'DEV_ANDROID_APP_ID', messagingSenderId: 'DEV_SENDER_ID', projectId: 'spazalink-dev', storageBucket: 'spazalink-dev.firebasestorage.app');
-  static const FirebaseOptions ios     = FirebaseOptions(apiKey: 'DEV_IOS_API_KEY',     appId: 'DEV_IOS_APP_ID',     messagingSenderId: 'DEV_SENDER_ID', projectId: 'spazalink-dev', storageBucket: 'spazalink-dev.firebasestorage.app', iosBundleId: 'com.spazalink.admin.dev');
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAv5Ei0-rxNwvMqMP865ohcR_vCTFuaPII',
+    appId: '1:1082805554542:web:admin-dev',
+    messagingSenderId: '1082805554542',
+    projectId: 'spazalink-d8a59',
+    storageBucket: 'spazalink-d8a59.firebasestorage.app',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyAv5Ei0-rxNwvMqMP865ohcR_vCTFuaPII',
+    appId: '1:1082805554542:android:a269218eb8efc2c9ec057f',
+    messagingSenderId: '1082805554542',
+    projectId: 'spazalink-d8a59',
+    storageBucket: 'spazalink-d8a59.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDLZRnbzy8YYM9gYbZDYihkckYV4CWKRhE',
+    appId: '1:1082805554542:ios:c0ab6a6da25118e8ec057f',
+    messagingSenderId: '1082805554542',
+    projectId: 'spazalink-d8a59',
+    storageBucket: 'spazalink-d8a59.firebasestorage.app',
+    iosBundleId: 'com.spazalink.admin.dev',
+  );
 }

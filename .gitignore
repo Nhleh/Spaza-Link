@@ -38,6 +38,15 @@ build/
 google-services.json
 GoogleService-Info.plist
 .firebaserc
+
+# Local emulator runtime data & logs (data persists on disk; not versioned)
+emulator-data/
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+
+# Claude Code local settings
+.claude/
 firebase_options.dart
 
 # Environment

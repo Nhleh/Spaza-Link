@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dev-only: the Firebase Emulator Suite (Auth, Firestore, Storage) runs over
+  plain HTTP. Android blocks cleartext traffic by default (API 28+), which
+  makes emulator auth/Firestore calls fail with
+  "Cleartext HTTP traffic to 10.0.2.2 not permitted". This permits cleartext
+  ONLY to the local emulator hosts, and only in debug builds.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

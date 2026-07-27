@@ -10,6 +10,7 @@ import '../../features/auth/screens/pending_approval_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/rejected_screen.dart';
 import '../../features/auth/screens/splash_screen.dart';
+import '../../features/auth/screens/welcome_screen.dart';
 import '../../features/catalogue/screens/catalogue_screen.dart';
 import '../../features/catalogue/screens/category_products_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
@@ -18,6 +19,7 @@ import '../../features/checkout/screens/order_success_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/main_shell.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_tracking_screen.dart';
 import '../../features/orders/screens/orders_screen.dart';
@@ -49,6 +51,12 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
         path: RouteConstants.splash,
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+
+      GoRoute(
+        path: RouteConstants.welcome,
+        name: 'welcome',
+        builder: (context, state) => const WelcomeScreen(),
       ),
 
       GoRoute(
@@ -178,8 +186,7 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteConstants.profile,
                 name: 'profile',
-                builder: (context, state) =>
-                    const _PlaceholderScreen(title: 'My Profile', phase: 8),
+                builder: (context, state) => const ProfileScreen(),
                 routes: [
                   GoRoute(
                     path: 'edit',
@@ -290,6 +297,7 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
 
     const authRoutes = {
       RouteConstants.splash,
+      RouteConstants.welcome,
       RouteConstants.login,
       RouteConstants.otpVerify,
       RouteConstants.register,
@@ -298,7 +306,7 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
     };
 
     if (uid == null) {
-      return authRoutes.contains(loc) ? null : RouteConstants.login;
+      return authRoutes.contains(loc) ? null : RouteConstants.welcome;
     }
 
     final shopAsync = ref.read(currentShopProvider);
@@ -310,18 +318,15 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
       return loc == RouteConstants.register ? null : RouteConstants.register;
     }
 
-    if (shop.status == AppConstants.shopStatusPending) {
-      return loc == RouteConstants.pendingApproval
-          ? null
-          : RouteConstants.pendingApproval;
-    }
-
+    // A rejected/suspended shop is blocked by the admin — keep that gate.
     if (shop.status == AppConstants.shopStatusRejected ||
         shop.status == AppConstants.shopStatusSuspended) {
       return loc == RouteConstants.rejected ? null : RouteConstants.rejected;
     }
 
-    // Approved shop — redirect away from auth routes.
+    // The person's profile is approved on sign-up, so a pending OR approved
+    // shop lets the user straight into the app. Only the shop itself waits on
+    // admin approval — its status is surfaced on the Profile screen.
     return authRoutes.contains(loc) ? RouteConstants.home : null;
   };
 }

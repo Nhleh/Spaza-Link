@@ -17,10 +17,20 @@ Future<void> main() async {
 
   AppConfig.initialise(AppConfig.development);
 
-  await _initFirebase();
+  // Never let a Firebase/emulator hiccup blank the whole app — always run it.
+  try {
+    await _initFirebase();
+  } catch (e) {
+    debugPrint('[SpazaLink-Admin-DEV] Firebase init failed: $e');
+  }
 
   runApp(const ProviderScope(child: AdminApp()));
 }
+
+/// Master switch for the backend.
+///   true  → local Firebase Emulator Suite (see run-emulators.ps1)
+///   false → LIVE Firebase cloud (project spazalink-d8a59)
+const bool kUseEmulators = true;
 
 Future<void> _initFirebase() async {
   if (!kFirebaseConfigured) {
@@ -35,13 +45,20 @@ Future<void> _initFirebase() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  await _connectEmulators();
+  if (kUseEmulators) {
+    await _connectEmulators();
+  }
 }
 
 Future<void> _connectEmulators() async {
   const host = 'localhost';
-  await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+  // Timeouts so an unreachable emulator can never hang startup (and blank the UI).
+  await FirebaseAuth.instance
+      .useAuthEmulator(host, 9099)
+      .timeout(const Duration(seconds: 5), onTimeout: () {});
   FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
-  await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+  await FirebaseStorage.instance
+      .useStorageEmulator(host, 9199)
+      .timeout(const Duration(seconds: 5), onTimeout: () {});
   debugPrint('[SpazaLink-Admin-DEV] Connected to Firebase Emulator Suite on $host');
 }

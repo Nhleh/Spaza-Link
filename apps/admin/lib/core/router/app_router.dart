@@ -12,6 +12,7 @@ import '../../features/orders/screens/admin_orders_screen.dart';
 import '../../features/products/screens/admin_product_form_screen.dart';
 import '../../features/products/screens/admin_products_screen.dart';
 import '../../features/shell/admin_shell.dart';
+import '../../features/shops/screens/admin_shops_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever admin auth state changes.
 class _AdminRouterNotifier extends ChangeNotifier {
@@ -137,15 +138,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteConstants.adminShops,
                 name: 'admin-shops',
-                builder: (context, state) =>
-                    const _AdminPlaceholder(title: 'Shops'),
+                builder: (context, state) => const AdminShopsScreen(),
                 routes: [
                   GoRoute(
                     path: ':shopId',
                     name: 'admin-shop-detail',
                     builder: (context, state) =>
-                        const _AdminPlaceholder(
-                            title: 'Shop Detail'),
+                        const AdminShopsScreen(),
                   ),
                 ],
               ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1082805554542",
+    "project_id": "spazalink-d8a59",
+    "storage_bucket": "spazalink-d8a59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1082805554542:android:a269218eb8efc2c9ec057f",
+        "android_client_info": {
+          "package_name": "com.example.spazalink_customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv5Ei0-rxNwvMqMP865ohcR_vCTFuaPII"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

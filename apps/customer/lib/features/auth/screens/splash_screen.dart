@@ -36,11 +36,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // After the minimum splash duration, navigate to login.
+    // After the minimum splash duration, navigate to the welcome screen.
     // GoRouter's auth redirect will immediately forward to the correct
-    // destination (home, register, pendingApproval, etc.) based on auth state.
+    // destination (home, pendingApproval, etc.) based on auth state.
     Future.delayed(AppConstants.splashDuration, () {
-      if (mounted) context.go(RouteConstants.login);
+      if (mounted) context.go(RouteConstants.welcome);
     });
   }
 

@@ -5,6 +5,7 @@ abstract final class RouteConstants {
   // ── Customer App ───────────────────────────────────────────────────────────
 
   static const String splash = '/';
+  static const String welcome = '/welcome';
   static const String login = '/login';
   static const String otpVerify = '/otp-verify';
   static const String register = '/register';

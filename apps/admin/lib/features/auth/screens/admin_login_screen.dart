@@ -171,6 +171,11 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.done,
+                            // Stop the browser auto-filling a saved (e.g. real
+                            // Gmail) password over the admin credential.
+                            autofillHints: const [AutofillHints.newPassword],
+                            enableSuggestions: false,
+                            autocorrect: false,
                             onFieldSubmitted: (_) => _submit(),
                             style: TextStyle(color: AppColors.darkOnSurface),
                             decoration: InputDecoration(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -51,26 +52,51 @@ Future<HiveCartRepository> _initHive() async {
   return HiveCartRepository.create();
 }
 
+/// Master switch for the backend.
+///   true  → local Firebase Emulator Suite (see run-emulators.ps1)
+///   false → LIVE Firebase cloud (project spazalink-d8a59)
+const bool kUseEmulators = true;
+
 Future<void> _initFirebase() async {
   if (!kFirebaseConfigured) {
     debugPrint('[SpazaLink-DEV] Firebase not configured — running offline.');
     return;
   }
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // On Android the native FirebaseInitProvider auto-initialises the [DEFAULT]
+  // app from google-services.json before Dart runs. Calling initializeApp from
+  // Dart then throws [core/duplicate-app]. The Dart-side Firebase.apps list is
+  // empty until we initialise, so it can't guard this — catch the duplicate
+  // instead and carry on with the already-initialised default app.
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } on FirebaseException catch (e) {
+    if (e.code != 'duplicate-app') rethrow;
+    debugPrint('[SpazaLink-DEV] Firebase already initialised natively — reusing [DEFAULT].');
+  }
 
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  await _connectEmulators();
+  if (kUseEmulators) {
+    await _connectEmulators();
+  }
 }
 
 Future<void> _connectEmulators() async {
-  const host = 'localhost';
-  await FirebaseAuth.instance.useAuthEmulator(host, 9099);
-  FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
-  await FirebaseStorage.instance.useStorageEmulator(host, 9199);
-  debugPrint('[SpazaLink-DEV] Connected to Firebase Emulator Suite on $host');
+  // Android emulators reach the host machine via 10.0.2.2, not localhost
+  // (localhost on the device points at the device itself). iOS simulators
+  // and desktop can use localhost directly.
+  final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
+  try {
+    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+    FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+    await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+    debugPrint('[SpazaLink-DEV] Connected to Firebase Emulator Suite on $host');
+  } catch (e) {
+    // Don't let an unreachable emulator suite block app startup.
+    debugPrint('[SpazaLink-DEV] Could not connect to Firebase emulators: $e');
+  }
 }
