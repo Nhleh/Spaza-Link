@@ -1,5 +1,7 @@
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../providers/category_provider.dart';
@@ -329,6 +331,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController _slug;
   late final TextEditingController _sortOrder;
   bool _isAvailable = true;
+  String _iconUrl = '';
+  bool _uploading = false;
 
   @override
   void initState() {
@@ -339,6 +343,40 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     _sortOrder =
         TextEditingController(text: '${e?.sortOrder ?? 0}');
     _isAvailable = e?.isAvailable ?? true;
+    _iconUrl = e?.iconUrl ?? '';
+  }
+
+  Future<void> _pickAndUploadIcon() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 512,
+      );
+      if (file == null) return;
+      setState(() => _uploading = true);
+      final bytes = await file.readAsBytes();
+      final ext = file.name.contains('.') ? file.name.split('.').last : 'jpg';
+      final ref = FirebaseStorage.instance
+          .ref('category_icons/${DateTime.now().millisecondsSinceEpoch}.$ext');
+      await ref.putData(
+        bytes,
+        SettableMetadata(contentType: file.mimeType ?? 'image/jpeg'),
+      );
+      final url = await ref.getDownloadURL();
+      if (!mounted) return;
+      setState(() {
+        _iconUrl = url;
+        _uploading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Image upload failed: $e'),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   @override
@@ -396,6 +434,42 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 inputType: TextInputType.number,
               ),
               const SizedBox(height: 12),
+              // Category image / thumbnail
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.adminDarkSurfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.adminDarkOutline),
+                      image: _iconUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(_iconUrl), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: _iconUrl.isEmpty
+                        ? const Icon(Icons.category_outlined,
+                            color: AppColors.darkOnSurfaceVariant)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: _uploading ? null : _pickAndUploadIcon,
+                    icon: _uploading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.upload_rounded, size: 18),
+                    label: Text(_iconUrl.isEmpty ? 'Upload image' : 'Change image'),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.darkOnSurface),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment:
                     MainAxisAlignment.spaceBetween,
@@ -447,7 +521,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       slug: _slug.text.trim(),
       sortOrder: int.tryParse(_sortOrder.text) ?? 0,
       isAvailable: _isAvailable,
-      iconUrl: widget.existing?.iconUrl ?? '',
+      iconUrl: _iconUrl,
       imageUrl: widget.existing?.imageUrl ?? '',
       productCount: widget.existing?.productCount ?? 0,
       createdAt: widget.existing?.createdAt ?? now,

@@ -17,6 +17,13 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  // Fields start read-only so the browser cannot auto-fill a saved (e.g. real
+  // Gmail) password over the admin credentials. They unlock on first tap.
+  bool _unlocked = false;
+  void _unlock() {
+    if (!_unlocked) setState(() => _unlocked = true);
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -127,6 +134,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
                             autocorrect: false,
+                            readOnly: !_unlocked,
+                            onTap: _unlock,
                             style: TextStyle(color: AppColors.darkOnSurface),
                             decoration: InputDecoration(
                               labelText: 'Email',
@@ -171,8 +180,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.done,
-                            // Stop the browser auto-filling a saved (e.g. real
-                            // Gmail) password over the admin credential.
+                            // Read-only until tapped + new-password hint: the
+                            // browser cannot auto-fill a saved password here.
+                            readOnly: !_unlocked,
+                            onTap: _unlock,
                             autofillHints: const [AutofillHints.newPassword],
                             enableSuggestions: false,
                             autocorrect: false,

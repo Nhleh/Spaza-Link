@@ -45,7 +45,7 @@ class AppConfig {
 
   static AppConfig get development => AppConfig._(
         environment: AppEnvironment.development,
-        firebaseProjectId: 'spazalink-dev',
+        firebaseProjectId: 'spazalink-d8a59',
         useEmulators: true,
         emulatorHost: 'localhost',
       );
