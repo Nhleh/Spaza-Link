@@ -1,7 +1,9 @@
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../categories/providers/category_provider.dart';
@@ -38,6 +40,9 @@ class _AdminProductFormScreenState
   bool _isFeatured = false;
   bool _hasSalePrice = false;
 
+  List<String> _imageUrls = [];
+  bool _uploadingImage = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +63,42 @@ class _AdminProductFormScreenState
     _isAvailable = p?.isAvailable ?? true;
     _isFeatured = p?.isFeatured ?? false;
     _hasSalePrice = p?.salePriceCents != null;
+    _imageUrls = List<String>.from(p?.imageUrls ?? const []);
+  }
+
+  /// Pick an image and upload it to Firebase Storage, then keep its URL.
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 82,
+        maxWidth: 1400,
+      );
+      if (file == null) return;
+      setState(() => _uploadingImage = true);
+
+      final bytes = await file.readAsBytes();
+      final ext = file.name.contains('.') ? file.name.split('.').last : 'jpg';
+      final ref = FirebaseStorage.instance
+          .ref('product_images/${DateTime.now().millisecondsSinceEpoch}.$ext');
+      await ref.putData(
+        bytes,
+        SettableMetadata(contentType: file.mimeType ?? 'image/jpeg'),
+      );
+      final url = await ref.getDownloadURL();
+      if (!mounted) return;
+      setState(() {
+        _imageUrls.add(url);
+        _uploadingImage = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Image upload failed: $e'),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   @override
@@ -291,6 +332,30 @@ class _AdminProductFormScreenState
                   child: Column(
                     children: [
                       _FormCard(
+                        title: 'Product Images',
+                        children: [
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              for (final url in _imageUrls)
+                                _ImageThumb(
+                                  url: url,
+                                  onRemove: () =>
+                                      setState(() => _imageUrls.remove(url)),
+                                ),
+                              _AddImageTile(
+                                loading: _uploadingImage,
+                                onTap: _uploadingImage
+                                    ? null
+                                    : _pickAndUploadImage,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _FormCard(
                         title: 'Inventory',
                         children: [
                           _FormField(
@@ -379,7 +444,7 @@ class _AdminProductFormScreenState
           : null,
       isAvailable: _isAvailable,
       isFeatured: _isFeatured,
-      imageUrls: widget.product?.imageUrls ?? [],
+      imageUrls: _imageUrls,
       tags: widget.product?.tags ?? [],
       createdAt: widget.product?.createdAt ?? now,
       updatedAt: now,
@@ -390,6 +455,96 @@ class _AdminProductFormScreenState
     } else {
       ref.read(productManagementProvider.notifier).create(product);
     }
+  }
+}
+
+// ── Image widgets ─────────────────────────────────────────────────────────────
+
+class _ImageThumb extends StatelessWidget {
+  const _ImageThumb({required this.url, required this.onRemove});
+  final String url;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            url,
+            width: 84,
+            height: 84,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              width: 84,
+              height: 84,
+              color: AppColors.adminDarkSurfaceVariant,
+              child: const Icon(Icons.broken_image_outlined,
+                  color: AppColors.darkOnSurfaceVariant),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 2,
+          right: 2,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(2),
+              child: const Icon(Icons.close, size: 14, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddImageTile extends StatelessWidget {
+  const _AddImageTile({required this.loading, required this.onTap});
+  final bool loading;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 84,
+        height: 84,
+        decoration: BoxDecoration(
+          color: AppColors.adminDarkSurfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.adminDarkOutline),
+        ),
+        child: Center(
+          child: loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.brandGreenPrimary),
+                )
+              : const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined,
+                        color: AppColors.darkOnSurfaceVariant, size: 22),
+                    SizedBox(height: 4),
+                    Text('Add',
+                        style: TextStyle(
+                            color: AppColors.darkOnSurfaceVariant, fontSize: 11)),
+                  ],
+                ),
+        ),
+      ),
+    );
   }
 }
 
