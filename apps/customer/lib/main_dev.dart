@@ -11,9 +11,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'firebase_options_dev.dart';
+import 'supabase_config.dart';
 import 'features/cart/data/hive_cart_repository.dart';
 import 'features/cart/providers/cart_provider.dart';
 
@@ -33,6 +35,12 @@ Future<void> main() async {
   );
 
   AppConfig.initialise(AppConfig.development);
+
+  // Live backend — Supabase (auth, database, storage).
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
 
   final cartRepo = await _initHive();
   await _initFirebase();

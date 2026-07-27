@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/firebase_auth_repository.dart';
+import '../data/supabase_auth_repository.dart';
 
 // ── Repository ─────────────────────────────────────────────────────────────────
 
-final authRepositoryProvider = Provider<FirebaseAuthRepository>((ref) {
-  return FirebaseAuthRepository();
+final authRepositoryProvider = Provider<SupabaseAuthRepository>((ref) {
+  return SupabaseAuthRepository();
 });
 
 // ── Auth UID stream ────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ class AuthActionNotifier extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
-  FirebaseAuthRepository get _repo => ref.read(authRepositoryProvider);
+  SupabaseAuthRepository get _repo => ref.read(authRepositoryProvider);
 
   /// Signs in with an email or cellphone [identifier] plus [password].
   /// Returns true on success; the router redirect handles navigation.
