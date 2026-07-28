@@ -291,18 +291,24 @@ class _ProductImageGallery extends StatelessWidget {
       controller: controller,
       onPageChanged: onPageChanged,
       itemCount: product.imageUrls.length,
-      itemBuilder: (_, i) => CachedNetworkImage(
-        imageUrl: product.imageUrls[i],
-        fit: BoxFit.cover,
-        placeholder: (_, __) => const Center(
-          child: CircularProgressIndicator(color: AppColors.brandGreenPrimary),
-        ),
-        errorWidget: (_, __, ___) => Container(
-          color: AppColors.brandGreenSurfaceLight,
-          child: const Icon(
-            Icons.broken_image_outlined,
-            color: AppColors.lightOnSurfaceVariant,
-            size: 48,
+      itemBuilder: (_, i) => ColoredBox(
+        // White backdrop so the full product image shows (contain) without
+        // being cropped, and letterboxing looks intentional.
+        color: AppColors.white,
+        child: CachedNetworkImage(
+          imageUrl: product.imageUrls[i],
+          fit: BoxFit.contain,
+          placeholder: (_, __) => const Center(
+            child:
+                CircularProgressIndicator(color: AppColors.brandGreenPrimary),
+          ),
+          errorWidget: (_, __, ___) => Container(
+            color: AppColors.brandGreenSurfaceLight,
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: AppColors.lightOnSurfaceVariant,
+              size: 48,
+            ),
           ),
         ),
       ),

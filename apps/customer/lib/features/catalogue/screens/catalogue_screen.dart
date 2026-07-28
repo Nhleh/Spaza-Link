@@ -393,18 +393,26 @@ class _Thumb extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       child: (imageUrl == null || imageUrl!.isEmpty)
           ? fallback()
-          : CachedNetworkImage(
-              imageUrl: imageUrl!,
+          : Container(
               width: size,
               height: size,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Shimmer.fromColors(
-                baseColor: AppColors.lightSurfaceVariant,
-                highlightColor: AppColors.lightOutlineVariant,
-                child: Container(
-                    width: size, height: size, color: AppColors.lightSurfaceVariant),
+              color: AppColors.white,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl!,
+                width: size,
+                height: size,
+                // Contain shows the whole product image, uncropped.
+                fit: BoxFit.contain,
+                placeholder: (_, __) => Shimmer.fromColors(
+                  baseColor: AppColors.lightSurfaceVariant,
+                  highlightColor: AppColors.lightOutlineVariant,
+                  child: Container(
+                      width: size,
+                      height: size,
+                      color: AppColors.lightSurfaceVariant),
+                ),
+                errorWidget: (_, __, ___) => fallback(),
               ),
-              errorWidget: (_, __, ___) => fallback(),
             ),
     );
   }

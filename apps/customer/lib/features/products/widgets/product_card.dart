@@ -153,7 +153,8 @@ class _ProductImage extends StatelessWidget {
       imageUrl: imageUrl!,
       height: AppSpacing.productCardImageHeight,
       width: double.infinity,
-      fit: BoxFit.cover,
+      // Contain (on the card's white surface) shows the whole product, uncropped.
+      fit: BoxFit.contain,
       placeholder: (_, __) => Shimmer.fromColors(
         baseColor: AppColors.lightSurfaceVariant,
         highlightColor: AppColors.lightOutlineVariant,

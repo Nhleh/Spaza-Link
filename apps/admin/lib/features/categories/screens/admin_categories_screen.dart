@@ -411,7 +411,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         width: 400,
         child: Form(
           key: _formKey,
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _DialogField(
@@ -489,6 +490,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),
