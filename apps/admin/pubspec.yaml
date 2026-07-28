@@ -21,7 +21,10 @@ dependencies:
   # Navigation
   go_router: ^14.2.0
 
-  # Firebase
+  # Backend — Supabase (live). Firebase kept temporarily during migration.
+  supabase_flutter: ^2.8.0
+
+  # Firebase (legacy — being removed as the Supabase migration completes)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4

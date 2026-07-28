@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/admin_auth_provider.dart';
-import '../data/firebase_shop_repository.dart';
+import '../data/supabase_shop_repository.dart';
 
-final shopRepositoryProvider = Provider<FirebaseShopRepository>((ref) {
-  return FirebaseShopRepository();
+final shopRepositoryProvider = Provider<SupabaseShopRepository>((ref) {
+  return SupabaseShopRepository();
 });
 
 /// Shops filtered by status ('pending', 'approved', 'rejected', 'suspended').
@@ -43,7 +43,9 @@ class ShopManagementNotifier extends Notifier<ShopManagementState> {
   @override
   ShopManagementState build() => const ShopManagementIdle();
 
-  FirebaseShopRepository get _repo => ref.read(shopRepositoryProvider);
+  SupabaseShopRepository get _repo => ref.read(shopRepositoryProvider);
+
+  void _refresh() => ref.invalidate(shopsByStatusProvider);
 
   Future<void> approve(String shopId) async {
     final adminUid = ref.read(adminAuthUidProvider).valueOrNull;
@@ -54,6 +56,7 @@ class ShopManagementNotifier extends Notifier<ShopManagementState> {
     state = const ShopManagementLoading();
     try {
       await _repo.approveShop(shopId, adminUid);
+      _refresh();
       state = const ShopManagementSuccess('Shop approved.');
     } catch (e) {
       state = ShopManagementError(e.toString());
@@ -64,6 +67,7 @@ class ShopManagementNotifier extends Notifier<ShopManagementState> {
     state = const ShopManagementLoading();
     try {
       await _repo.rejectShop(shopId, reason);
+      _refresh();
       state = const ShopManagementSuccess('Shop rejected.');
     } catch (e) {
       state = ShopManagementError(e.toString());
@@ -74,6 +78,7 @@ class ShopManagementNotifier extends Notifier<ShopManagementState> {
     state = const ShopManagementLoading();
     try {
       await _repo.suspendShop(shopId, reason);
+      _refresh();
       state = const ShopManagementSuccess('Shop suspended.');
     } catch (e) {
       state = ShopManagementError(e.toString());

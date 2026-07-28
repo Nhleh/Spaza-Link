@@ -1,8 +1,8 @@
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/category_provider.dart';
 
@@ -357,13 +357,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       setState(() => _uploading = true);
       final bytes = await file.readAsBytes();
       final ext = file.name.contains('.') ? file.name.split('.').last : 'jpg';
-      final ref = FirebaseStorage.instance
-          .ref('category_icons/${DateTime.now().millisecondsSinceEpoch}.$ext');
-      await ref.putData(
+      final path = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final storage = Supabase.instance.client.storage.from('category_icons');
+      await storage.uploadBinary(
+        path,
         bytes,
-        SettableMetadata(contentType: file.mimeType ?? 'image/jpeg'),
+        fileOptions: FileOptions(contentType: file.mimeType ?? 'image/jpeg'),
       );
-      final url = await ref.getDownloadURL();
+      final url = storage.getPublicUrl(path);
       if (!mounted) return;
       setState(() {
         _iconUrl = url;

@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/admin_firebase_auth_repository.dart';
+import '../data/supabase_admin_auth_repository.dart';
 
 // ── Repository ─────────────────────────────────────────────────────────────────
 
 final adminAuthRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AdminFirebaseAuthRepository();
+  return SupabaseAdminAuthRepository();
 });
 
 // ── Auth UID stream ────────────────────────────────────────────────────────────

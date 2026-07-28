@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/firebase_category_repository.dart';
+import '../data/supabase_category_repository.dart';
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
-  return FirebaseCategoryRepository();
+  return SupabaseCategoryRepository();
 });
 
 final categoriesProvider = StreamProvider<List<CategoryModel>>((ref) {
@@ -39,6 +39,7 @@ class CategoryManagementNotifier extends Notifier<CategoryManagementState> {
     state = CategoryManagementLoading();
     try {
       await _repo.createCategory(category);
+      ref.invalidate(categoriesProvider);
       state = CategoryManagementSuccess('Category created.');
     } catch (e) {
       state = CategoryManagementError(e.toString());
@@ -49,6 +50,7 @@ class CategoryManagementNotifier extends Notifier<CategoryManagementState> {
     state = CategoryManagementLoading();
     try {
       await _repo.updateCategory(category);
+      ref.invalidate(categoriesProvider);
       state = CategoryManagementSuccess('Category updated.');
     } catch (e) {
       state = CategoryManagementError(e.toString());
@@ -59,6 +61,7 @@ class CategoryManagementNotifier extends Notifier<CategoryManagementState> {
     state = CategoryManagementLoading();
     try {
       await _repo.deleteCategory(categoryId);
+      ref.invalidate(categoriesProvider);
       state = CategoryManagementSuccess('Category deleted.');
     } catch (e) {
       state = CategoryManagementError(e.toString());

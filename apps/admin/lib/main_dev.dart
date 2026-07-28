@@ -8,14 +8,22 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'firebase_options_dev.dart';
+import 'supabase_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   AppConfig.initialise(AppConfig.development);
+
+  // Live backend — Supabase (auth, database, storage).
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
 
   // Never let a Firebase/emulator hiccup blank the whole app — always run it.
   try {
@@ -27,10 +35,9 @@ Future<void> main() async {
   runApp(const ProviderScope(child: AdminApp()));
 }
 
-/// Master switch for the backend.
-///   true  → local Firebase Emulator Suite (see run-emulators.ps1)
-///   false → LIVE Firebase cloud (project spazalink-d8a59)
-const bool kUseEmulators = true;
+/// Legacy Firebase toggle. Now on Supabase — Firebase only lingers for the
+/// not-yet-migrated Orders screen, so don't connect to the dead emulator.
+const bool kUseEmulators = false;
 
 Future<void> _initFirebase() async {
   if (!kFirebaseConfigured) {

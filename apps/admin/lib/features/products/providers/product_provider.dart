@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/firebase_product_repository.dart';
+import '../data/supabase_product_repository.dart';
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
-  return FirebaseProductRepository();
+  return SupabaseProductRepository();
 });
 
 final allProductsProvider = StreamProvider<List<ProductModel>>((ref) {
@@ -42,10 +42,17 @@ class ProductManagementNotifier extends Notifier<ProductManagementState> {
 
   ProductRepository get _repo => ref.read(productRepositoryProvider);
 
+  // Re-fetch the (one-shot) list streams after a change.
+  void _refresh() {
+    ref.invalidate(allProductsProvider);
+    ref.invalidate(categoryProductsProvider);
+  }
+
   Future<void> create(ProductModel product) async {
     state = ProductManagementLoading();
     try {
       await _repo.createProduct(product);
+      _refresh();
       state = ProductManagementSuccess('Product created.');
     } catch (e) {
       state = ProductManagementError(e.toString());
@@ -56,6 +63,7 @@ class ProductManagementNotifier extends Notifier<ProductManagementState> {
     state = ProductManagementLoading();
     try {
       await _repo.updateProduct(product);
+      _refresh();
       state = ProductManagementSuccess('Product updated.');
     } catch (e) {
       state = ProductManagementError(e.toString());
@@ -66,6 +74,7 @@ class ProductManagementNotifier extends Notifier<ProductManagementState> {
     state = ProductManagementLoading();
     try {
       await _repo.deleteProduct(productId);
+      _refresh();
       state = ProductManagementSuccess('Product deleted.');
     } catch (e) {
       state = ProductManagementError(e.toString());

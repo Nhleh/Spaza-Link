@@ -1,10 +1,10 @@
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../categories/providers/category_provider.dart';
 import '../providers/product_provider.dart';
@@ -79,13 +79,14 @@ class _AdminProductFormScreenState
 
       final bytes = await file.readAsBytes();
       final ext = file.name.contains('.') ? file.name.split('.').last : 'jpg';
-      final ref = FirebaseStorage.instance
-          .ref('product_images/${DateTime.now().millisecondsSinceEpoch}.$ext');
-      await ref.putData(
+      final path = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final storage = Supabase.instance.client.storage.from('product_images');
+      await storage.uploadBinary(
+        path,
         bytes,
-        SettableMetadata(contentType: file.mimeType ?? 'image/jpeg'),
+        fileOptions: FileOptions(contentType: file.mimeType ?? 'image/jpeg'),
       );
-      final url = await ref.getDownloadURL();
+      final url = storage.getPublicUrl(path);
       if (!mounted) return;
       setState(() {
         _imageUrls.add(url);
