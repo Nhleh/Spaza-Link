@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,8 +61,13 @@ class HomeScreen extends ConsumerWidget {
                     // Greeting
                     _GreetingSection(shop: shop),
 
-                    // Featured Banner
-                    const _FeaturedBanner(),
+                    // Savings value-prop hero
+                    const SizedBox(height: AppSpacing.md),
+                    const _SavingsBanner(),
+
+                    // Next delivery card (with truck)
+                    const SizedBox(height: AppSpacing.lg),
+                    _NextDeliveryCard(shop: shop),
 
                     // Shop by Category
                     const SizedBox(height: AppSpacing.x3l),
@@ -75,10 +78,10 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.md),
                     const _CategoryRow(),
 
-                    // Featured Products
+                    // Top Deals
                     const SizedBox(height: AppSpacing.x3l),
                     _SectionHeader(
-                      title: 'Featured Products',
+                      title: 'Top Deals',
                       onSeeAll: () => context.go(RouteConstants.catalogue),
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -232,129 +235,34 @@ class _GreetingSection extends StatelessWidget {
   }
 }
 
-// ── Featured Banner ───────────────────────────────────────────────────────────
+// ── Savings Banner ────────────────────────────────────────────────────────────
 
-class _FeaturedBanner extends StatefulWidget {
-  const _FeaturedBanner();
-
-  @override
-  State<_FeaturedBanner> createState() => _FeaturedBannerState();
-}
-
-class _FeaturedBannerState extends State<_FeaturedBanner> {
-  final _controller = PageController();
-  int _page = 0;
-  Timer? _timer;
-
-  // Placeholder banners — replaced with Firestore banners in Phase 8.
-  static const _banners = [
-    _BannerData(
-      gradient: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
-      icon: Icons.local_offer_rounded,
-      title: 'Bulk Savings Await',
-      subtitle: 'Stock up and save more per unit on every order.',
-    ),
-    _BannerData(
-      gradient: [Color(0xFFF57C00), Color(0xFFF9A825)],
-      icon: Icons.delivery_dining_rounded,
-      title: 'Free Delivery Over R1,750',
-      subtitle: 'Order more, pay less. Free delivery on big orders.',
-    ),
-    _BannerData(
-      gradient: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-      icon: Icons.wifi_off_rounded,
-      title: 'Order Offline Too',
-      subtitle: 'No connection? Your orders are saved and sent automatically.',
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
-      final next = (_page + 1) % _banners.length;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 140,
-          child: PageView.builder(
-            controller: _controller,
-            onPageChanged: (p) => setState(() => _page = p),
-            itemCount: _banners.length,
-            itemBuilder: (_, i) => _BannerSlide(data: _banners[i]),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            _banners.length,
-            (i) => AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: _page == i ? 20 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: _page == i
-                    ? AppColors.brandGreenPrimary
-                    : AppColors.lightOutline,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BannerData {
-  const _BannerData({
-    required this.gradient,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-  final List<Color> gradient;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-}
-
-class _BannerSlide extends StatelessWidget {
-  const _BannerSlide({required this.data});
-  final _BannerData data;
+/// Green value-prop hero, matching the mockup's savings card. Honest copy — no
+/// fabricated figures until real order history exists to compute savings from.
+class _SavingsBanner extends StatelessWidget {
+  const _SavingsBanner();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
       child: Container(
+        width: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: data.gradient,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brandGreenPrimary.withValues(alpha: 0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Row(
@@ -362,10 +270,9 @@ class _BannerSlide extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    data.title,
+                    'Buy in bulk, save more',
                     style: AppTypography.titleLarge.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.w800,
@@ -373,9 +280,10 @@ class _BannerSlide extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    data.subtitle,
+                    'Wholesale prices delivered to your shop. '
+                    'The more you order, the less you pay per unit.',
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.88),
+                      color: AppColors.white.withValues(alpha: 0.9),
                       height: 1.4,
                     ),
                   ),
@@ -383,8 +291,111 @@ class _BannerSlide extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.lg),
-            Icon(data.icon, color: AppColors.white.withValues(alpha: 0.3), size: 56),
+            Icon(
+              Icons.savings_rounded,
+              color: AppColors.white.withValues(alpha: 0.28),
+              size: 56,
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Next Delivery Card ────────────────────────────────────────────────────────
+
+/// White card with the delivery truck, matching mockup screen 4. Reflects the
+/// real shop status — no fake delivery dates.
+class _NextDeliveryCard extends StatelessWidget {
+  const _NextDeliveryCard({this.shop});
+  final ShopModel? shop;
+
+  ({String title, String subtitle}) get _status {
+    if (shop == null) {
+      return (
+        title: 'Next delivery',
+        subtitle: 'Register your shop to schedule deliveries',
+      );
+    }
+    final approved = shop!.status == 'approved';
+    if (!approved) {
+      return (
+        title: 'Shop pending approval',
+        subtitle: 'Deliveries unlock once an admin approves your shop',
+      );
+    }
+    return (
+      title: 'No delivery scheduled',
+      subtitle: 'Place an order and we\'ll schedule your delivery',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _status;
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
+      child: Material(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        elevation: 0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          onTap: () => context.go(RouteConstants.orders),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(color: AppColors.lightOutlineVariant),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandGreenPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: const Icon(
+                    Icons.local_shipping_rounded,
+                    color: AppColors.brandGreenPrimary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.title,
+                        style: AppTypography.titleSmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.lightOnSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        s.subtitle,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.lightOnSurfaceVariant,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.lightOnSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
