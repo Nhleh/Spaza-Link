@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/firebase_category_repository.dart';
+import '../data/supabase_category_repository.dart';
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
-  return FirebaseCategoryRepository();
+  return SupabaseCategoryRepository();
 });
 
 final categoriesProvider = StreamProvider<List<CategoryModel>>((ref) {

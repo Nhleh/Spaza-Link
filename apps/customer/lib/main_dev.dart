@@ -60,10 +60,9 @@ Future<HiveCartRepository> _initHive() async {
   return HiveCartRepository.create();
 }
 
-/// Master switch for the backend.
-///   true  → local Firebase Emulator Suite (see run-emulators.ps1)
-///   false → LIVE Firebase cloud (project spazalink-d8a59)
-const bool kUseEmulators = true;
+/// Legacy Firebase toggle. Now on Supabase — Firebase only lingers for the
+/// not-yet-migrated Orders feature, so don't connect to the dead emulator.
+const bool kUseEmulators = false;
 
 Future<void> _initFirebase() async {
   if (!kFirebaseConfigured) {
