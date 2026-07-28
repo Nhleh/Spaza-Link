@@ -435,43 +435,57 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 hint: '0',
                 inputType: TextInputType.number,
               ),
-              const SizedBox(height: 12),
-              // Category image / thumbnail
-              Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppColors.adminDarkSurfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.adminDarkOutline),
-                      image: _iconUrl.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(_iconUrl), fit: BoxFit.cover)
-                          : null,
-                    ),
-                    child: _iconUrl.isEmpty
-                        ? const Icon(Icons.category_outlined,
-                            color: AppColors.darkOnSurfaceVariant)
-                        : null,
+              const SizedBox(height: 16),
+              // ── Category image (preview) + upload button below it ──────────
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Category Image',
+                  style: TextStyle(
+                    color: AppColors.darkOnSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: _uploading ? null : _pickAndUploadIcon,
-                    icon: _uploading
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.upload_rounded, size: 18),
-                    label: Text(_iconUrl.isEmpty ? 'Upload image' : 'Change image'),
-                    style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.darkOnSurface),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  color: AppColors.adminDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.adminDarkOutline),
+                  image: _iconUrl.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(_iconUrl), fit: BoxFit.cover)
+                      : null,
+                ),
+                child: _iconUrl.isEmpty
+                    ? const Icon(Icons.image_outlined,
+                        color: AppColors.darkOnSurfaceVariant, size: 34)
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _uploading ? null : _pickAndUploadIcon,
+                  icon: _uploading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.upload_rounded, size: 18),
+                  label: Text(_iconUrl.isEmpty ? 'Upload Image' : 'Change Image'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.darkOnSurface,
+                    side: const BorderSide(color: AppColors.brandGreenPrimary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment:
                     MainAxisAlignment.spaceBetween,
