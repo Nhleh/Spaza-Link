@@ -55,6 +55,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (err is AppException && err.code == 'account-not-found') {
       context.showErrorSnack('No account found. Please register first.');
       context.go(RouteConstants.register);
+    } else if (err is AppException && err.code == 'invalid-credentials') {
+      // Supabase can't distinguish a wrong password from a missing account, so
+      // point the user at Register in case they've never signed up here.
+      context.showErrorSnack(
+        'Incorrect details, or you haven\'t registered yet. '
+        'Tap "Register your shop" to create an account.',
+      );
     } else if (err is AppException) {
       context.showErrorSnack(err.message);
     } else {

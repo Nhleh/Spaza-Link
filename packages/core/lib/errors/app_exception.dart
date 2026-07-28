@@ -33,8 +33,15 @@ final class AuthException extends AppException {
       );
 
   factory AuthException.phoneAlreadyInUse() => const AuthException(
-        message: 'This phone number is already registered.',
+        message: 'This phone number is already registered. '
+            'Try signing in instead, or use a different number.',
         code: 'phone-already-in-use',
+      );
+
+  factory AuthException.emailAlreadyInUse() => const AuthException(
+        message: 'This email is already registered. '
+            'Try signing in instead, or use a different email.',
+        code: 'email-already-in-use',
       );
 
   factory AuthException.networkError() => const AuthException(
@@ -68,9 +75,8 @@ final class AuthException extends AppException {
         'invalid-credential' =>
           AuthException.invalidCredentials(),
         'user-disabled' => AuthException.userDisabled(),
-        'email-already-in-use' ||
-        'phone-number-already-exists' =>
-          AuthException.phoneAlreadyInUse(),
+        'email-already-in-use' => AuthException.emailAlreadyInUse(),
+        'phone-number-already-exists' => AuthException.phoneAlreadyInUse(),
         'network-request-failed' => AuthException.networkError(),
         'invalid-verification-code' ||
         'invalid-verification-id' =>

@@ -26,12 +26,27 @@ class SupabaseAuthRepository implements AuthRepository {
     required bool useEmailLogin,
   }) async {
     try {
+      final normalized = normalizePhone(phone);
+
+      // A cellphone can belong to only one account (phone-login resolves
+      // phone -> email), so reject a number that's already taken *before*
+      // creating the auth user. Uses a SECURITY DEFINER RPC; if that function
+      // isn't deployed yet we skip the check rather than block registration.
+      if (normalized.isNotEmpty) {
+        try {
+          final taken =
+              await _sb.rpc('phone_in_use', params: {'p_phone': normalized});
+          if (taken == true) throw AuthException.phoneAlreadyInUse();
+        } on supa.PostgrestException {
+          // RPC not deployed — fall through and let signup proceed.
+        }
+      }
+
       final res = await _sb.auth.signUp(email: email.trim(), password: password);
       final user = res.user;
       if (user == null) throw AuthException.networkError();
 
       // A DB trigger created a bare profile row; populate it.
-      final normalized = normalizePhone(phone);
       final row = await _sb
           .from('profiles')
           .update({
@@ -179,8 +194,11 @@ class SupabaseAuthRepository implements AuthRepository {
 
   AppException _mapAuthError(supa.AuthException e) {
     final m = e.message.toLowerCase();
-    if (m.contains('already registered') || m.contains('already exists')) {
-      return AuthException.phoneAlreadyInUse();
+    // Supabase signUp returns "User already registered" when the EMAIL exists.
+    if (m.contains('already registered') ||
+        m.contains('already been registered') ||
+        (m.contains('email') && m.contains('exists'))) {
+      return AuthException.emailAlreadyInUse();
     }
     if (m.contains('invalid login') || m.contains('invalid credentials')) {
       return AuthException.invalidCredentials();
