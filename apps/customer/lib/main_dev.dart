@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,13 +57,12 @@ Future<HiveCartRepository> _initHive() async {
   return HiveCartRepository.create();
 }
 
-/// Legacy Firebase toggle. Now on Supabase — Firebase only lingers for the
-/// not-yet-migrated Orders feature, so don't connect to the dead emulator.
-const bool kUseEmulators = false;
-
+/// Firebase now only lingers for the not-yet-migrated Orders feature (native
+/// platforms). On web there's no Firebase config, so skip it entirely — the
+/// live backend is Supabase, which is fully web-compatible.
 Future<void> _initFirebase() async {
-  if (!kFirebaseConfigured) {
-    debugPrint('[SpazaLink-DEV] Firebase not configured — running offline.');
+  if (kIsWeb || !kFirebaseConfigured) {
+    debugPrint('[SpazaLink-DEV] Firebase skipped — running on Supabase.');
     return;
   }
 
@@ -86,24 +82,4 @@ Future<void> _initFirebase() async {
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
-
-  if (kUseEmulators) {
-    await _connectEmulators();
-  }
-}
-
-Future<void> _connectEmulators() async {
-  // Android emulators reach the host machine via 10.0.2.2, not localhost
-  // (localhost on the device points at the device itself). iOS simulators
-  // and desktop can use localhost directly.
-  final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
-  try {
-    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
-    FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
-    await FirebaseStorage.instance.useStorageEmulator(host, 9199);
-    debugPrint('[SpazaLink-DEV] Connected to Firebase Emulator Suite on $host');
-  } catch (e) {
-    // Don't let an unreachable emulator suite block app startup.
-    debugPrint('[SpazaLink-DEV] Could not connect to Firebase emulators: $e');
-  }
 }
