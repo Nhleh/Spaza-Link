@@ -138,18 +138,7 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Tab 2 — Cart
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RouteConstants.cart,
-                name: 'cart',
-                builder: (context, state) => const CartScreen(),
-              ),
-            ],
-          ),
-
-          // Tab 3 — Orders (Phase 7)
+          // Tab 2 — Orders (Phase 7)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -258,6 +247,14 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
           final query = state.uri.queryParameters['q'] ?? '';
           return SearchScreen(initialQuery: query);
         },
+      ),
+
+      // Cart is a full-screen route (reached from the top-bar cart icon), not a
+      // bottom-nav tab — so it isn't duplicated in the navigation bar.
+      GoRoute(
+        path: RouteConstants.cart,
+        name: 'cart',
+        builder: (context, state) => const CartScreen(),
       ),
 
       GoRoute(

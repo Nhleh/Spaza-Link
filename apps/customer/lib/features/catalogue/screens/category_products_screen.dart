@@ -42,7 +42,7 @@ class CategoryProductsScreen extends ConsumerWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_cart_outlined),
-                onPressed: () => context.go(RouteConstants.cart),
+                onPressed: () => context.push(RouteConstants.cart),
               ),
               if (cartCount > 0)
                 Positioned(

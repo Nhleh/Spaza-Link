@@ -148,7 +148,7 @@ class _CartIconButton extends StatelessWidget {
       children: [
         IconButton(
           icon: const Icon(Icons.shopping_cart_outlined),
-          onPressed: () => context.go(RouteConstants.cart),
+          onPressed: () => context.push(RouteConstants.cart),
           tooltip: 'Cart',
         ),
         if (count > 0)

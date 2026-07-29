@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
-import 'auth/providers/auth_provider.dart';
-import 'cart/providers/cart_provider.dart';
 import 'messages/providers/messages_provider.dart';
 
 class MainShell extends ConsumerWidget {
@@ -24,12 +22,6 @@ class MainShell extends ConsumerWidget {
       activeIcon: Icons.storefront_rounded,
       label: 'Shop',
       route: RouteConstants.catalogue,
-    ),
-    _TabItem(
-      icon: Icons.shopping_cart_outlined,
-      activeIcon: Icons.shopping_cart_rounded,
-      label: 'Cart',
-      route: RouteConstants.cart,
     ),
     _TabItem(
       icon: Icons.receipt_long_outlined,
@@ -53,8 +45,6 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shopId = ref.watch(currentShopProvider).valueOrNull?.id ?? '';
-    final cartCount = ref.watch(cartItemCountProvider(shopId));
     final unread = ref.watch(unreadMessagesProvider);
 
     return Scaffold(
@@ -72,8 +62,8 @@ class MainShell extends ConsumerWidget {
           final tab = _tabs[i];
           final isActive = navigationShell.currentIndex == i;
 
-          // Cart (index 2) and Messages (index 4) tabs get a count badge.
-          final badgeCount = i == 2 ? cartCount : (i == 4 ? unread : 0);
+          // Messages (index 3) tab gets an unread badge.
+          final badgeCount = i == 3 ? unread : 0;
           if (badgeCount > 0) {
             return NavigationDestination(
               icon: Badge(

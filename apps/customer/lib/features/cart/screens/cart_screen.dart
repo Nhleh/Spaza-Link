@@ -21,7 +21,6 @@ class CartScreen extends ConsumerWidget {
         backgroundColor: AppColors.brandGreenPrimary,
         foregroundColor: AppColors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
         title: const Text(
           'My Cart',
           style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700),

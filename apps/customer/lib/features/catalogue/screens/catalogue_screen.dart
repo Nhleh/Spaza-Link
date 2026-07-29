@@ -600,7 +600,7 @@ class _ViewCartBar extends ConsumerWidget {
         elevation: 4,
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          onTap: () => context.go(RouteConstants.cart),
+          onTap: () => context.push(RouteConstants.cart),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,

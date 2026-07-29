@@ -469,7 +469,7 @@ class _StickyCartBar extends ConsumerWidget {
                 height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
                   onPressed: inCart
-                      ? () => context.go(RouteConstants.cart)
+                      ? () => context.push(RouteConstants.cart)
                       : () => _addToCart(ref),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandGreenPrimary,
