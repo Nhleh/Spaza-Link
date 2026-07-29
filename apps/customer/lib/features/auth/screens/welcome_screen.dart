@@ -60,7 +60,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Bulk more. Save more. We deliver.',
+                AppConstants.appTagline,
                 style: AppTypography.bodyMedium
                     .copyWith(color: AppColors.lightOnSurfaceVariant),
               ),
