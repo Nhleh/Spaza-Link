@@ -67,9 +67,12 @@ class MessagesRepository {
     return msgs;
   }
 
-  /// One-shot stream (realtime isn't enabled) — invalidate to refresh.
+  /// Auto-refreshing stream: fetches immediately, then re-polls every 15s so new
+  /// admin messages (and the unread badge) appear without a manual refresh.
   Stream<List<AdminMessage>> watch() async* {
     yield await fetch();
+    yield* Stream.periodic(const Duration(seconds: 15))
+        .asyncMap((_) => fetch());
   }
 
   Future<void> markRead(String messageId) async {

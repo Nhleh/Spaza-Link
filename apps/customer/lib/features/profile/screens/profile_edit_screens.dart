@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/auth_provider.dart';
@@ -99,6 +101,8 @@ class _ShopInformationScreenState
   final _phone = TextEditingController();
   bool _busy = false;
   bool _loaded = false;
+  String? _photoUrl;
+  bool _uploadingPhoto = false;
 
   @override
   void dispose() {
@@ -116,7 +120,39 @@ class _ShopInformationScreenState
     _province.text = shop?.province ?? '';
     _ownerName.text = user?.displayName ?? shop?.ownerName ?? '';
     _phone.text = user?.phoneNumber ?? '';
+    _photoUrl = shop?.shopPhotoUrl;
     _loaded = true;
+  }
+
+  Future<void> _pickPhoto(ShopModel? shop) async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1024,
+      );
+      if (file == null) return;
+      setState(() => _uploadingPhoto = true);
+      final bytes = await file.readAsBytes();
+      final svc = ref.read(profileServiceProvider);
+      final url =
+          await svc.uploadShopPhoto(bytes, file.mimeType ?? 'image/jpeg');
+      // Persist immediately if we already have a shop.
+      if (shop != null) {
+        await svc.updateShop(shop.id, shopPhotoUrl: url);
+        ref.invalidate(currentShopProvider);
+      }
+      if (!mounted) return;
+      setState(() {
+        _photoUrl = url;
+        _uploadingPhoto = false;
+      });
+      _toast(context, 'Shop photo updated.');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _uploadingPhoto = false);
+      _toast(context, 'Could not upload photo: $e', error: true);
+    }
   }
 
   Future<void> _save(ShopModel? shop) async {
@@ -131,6 +167,7 @@ class _ShopInformationScreenState
           physicalAddress: _address.text,
           city: _city.text,
           province: _province.text,
+          shopPhotoUrl: _photoUrl,
         );
       }
       await svc.updateProfile(
@@ -162,6 +199,41 @@ class _ShopInformationScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandGreenSurface,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                      border: Border.all(color: AppColors.lightOutlineVariant),
+                    ),
+                    child: _uploadingPhoto
+                        ? const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : (_photoUrl == null || _photoUrl!.isEmpty)
+                            ? const Icon(Icons.storefront_rounded,
+                                size: 44, color: AppColors.brandGreenPrimary)
+                            : CachedNetworkImage(
+                                imageUrl: _photoUrl!, fit: BoxFit.cover),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextButton.icon(
+                    onPressed: _uploadingPhoto ? null : () => _pickPhoto(shop),
+                    icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                    label: Text((_photoUrl == null || _photoUrl!.isEmpty)
+                        ? 'Upload shop photo'
+                        : 'Change shop photo'),
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.brandGreenPrimary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             const _SectionLabel('Shop'),
             TextFormField(
               controller: _shopName,

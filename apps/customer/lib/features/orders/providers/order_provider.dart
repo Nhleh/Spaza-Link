@@ -2,11 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 import 'package:uuid/uuid.dart';
 
-import '../data/firebase_order_repository.dart';
+import '../data/supabase_order_repository.dart';
 import '../../cart/providers/cart_provider.dart';
 
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {
-  return FirebaseOrderRepository();
+  return SupabaseOrderRepository();
 });
 
 /// Live orders stream for the active shop.
