@@ -19,6 +19,7 @@ class AdminShell extends ConsumerWidget {
     _SidebarItem(icon: Icons.delivery_dining_rounded, label: 'Drivers',  index: 5),
     _SidebarItem(icon: Icons.bar_chart_rounded,     label: 'Reports',    index: 6),
     _SidebarItem(icon: Icons.settings_rounded,      label: 'Settings',   index: 7),
+    _SidebarItem(icon: Icons.campaign_rounded,      label: 'Communication', index: 8),
   ];
 
   @override
@@ -58,7 +59,7 @@ class _AdminSidebar extends ConsumerWidget {
   final ValueChanged<int> onDestinationSelected;
 
   static const _mainItems = [0, 1, 2, 3];
-  static const _opsItems  = [4, 5];
+  static const _opsItems  = [4, 8, 5];
   static const _sysItems  = [6, 7];
 
   @override

@@ -11,7 +11,9 @@ import '../../features/orders/screens/admin_order_detail_screen.dart';
 import '../../features/orders/screens/admin_orders_screen.dart';
 import '../../features/products/screens/admin_product_form_screen.dart';
 import '../../features/products/screens/admin_products_screen.dart';
+import '../../features/messaging/screens/admin_communication_screen.dart';
 import '../../features/shell/admin_shell.dart';
+import '../../features/shops/screens/admin_shop_detail_screen.dart';
 import '../../features/shops/screens/admin_shops_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever admin auth state changes.
@@ -141,10 +143,19 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const AdminShopsScreen(),
                 routes: [
                   GoRoute(
+                    path: 'message/:ownerId',
+                    name: 'admin-shop-message',
+                    builder: (context, state) => AdminCommunicationScreen(
+                      initialOwnerId: state.pathParameters['ownerId'],
+                    ),
+                  ),
+                  GoRoute(
                     path: ':shopId',
                     name: 'admin-shop-detail',
-                    builder: (context, state) =>
-                        const AdminShopsScreen(),
+                    builder: (context, state) => AdminShopDetailScreen(
+                      shopId: state.pathParameters['shopId']!,
+                      shop: state.extra as ShopModel?,
+                    ),
                   ),
                 ],
               ),
@@ -192,6 +203,17 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 name: 'admin-settings',
                 builder: (context, state) =>
                     const _AdminPlaceholder(title: 'Settings'),
+              ),
+            ],
+          ),
+
+          // Branch 8 — Communication
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/admin/communication',
+                name: 'admin-communication',
+                builder: (context, state) => const AdminCommunicationScreen(),
               ),
             ],
           ),

@@ -189,7 +189,9 @@ class AdminDashboardScreen extends ConsumerWidget {
             // ── Recent orders table ────────────────────────────────────────
             ordersAsync.when(
               loading: () => const _TableShimmer(),
-              error: (e, _) => _ErrorCard(message: e.toString()),
+              // Orders isn't on Supabase yet (still Firebase) — don't surface a
+              // scary permission-denied banner; just show nothing for now.
+              error: (_, __) => const SizedBox.shrink(),
               data: (orders) {
                 final recent = [...orders]
                   ..sort((a, b) => b.placedAt.compareTo(a.placedAt));

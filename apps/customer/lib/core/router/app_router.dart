@@ -18,6 +18,7 @@ import '../../features/checkout/screens/checkout_screen.dart';
 import '../../features/checkout/screens/order_success_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/main_shell.dart';
+import '../../features/messages/screens/messages_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/profile/screens/profile_edit_screens.dart';
@@ -181,7 +182,18 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Tab 4 — Profile (Phase 8)
+          // Tab 4 — Messages (admin → customer)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/messages',
+                name: 'messages',
+                builder: (context, state) => const MessagesScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 5 — Profile (Phase 8)
           StatefulShellBranch(
             routes: [
               GoRoute(
