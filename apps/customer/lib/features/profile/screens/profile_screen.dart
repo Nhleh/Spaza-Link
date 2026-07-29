@@ -114,7 +114,10 @@ class ProfileScreen extends ConsumerWidget {
                     );
                     if (confirm != true) return;
                     await signOut(ref);
-                    if (context.mounted) context.go(RouteConstants.welcome);
+                    // Route through the branded splash, which then forwards to
+                    // the Welcome screen (Login + Register). Splash has a solid
+                    // background, so there's no black flash on the way out.
+                    if (context.mounted) context.go(RouteConstants.splash);
                   },
                 ),
               ],
