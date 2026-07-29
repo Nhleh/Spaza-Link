@@ -134,6 +134,7 @@ class SupabaseAdminOrderRepository implements OrderRepository {
       shopId: r['shop_id'] as String? ?? '',
       customerId: r['customer_id'] as String? ?? '',
       status: r['status'] as String? ?? OrderStatus.pending,
+      syncStatus: SyncStatus.synced,
       items: items ?? const [],
       subtotalCents: total,
       deliveryFeeCents: 0,

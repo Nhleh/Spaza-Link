@@ -294,6 +294,14 @@ class _AdminOrderDetailScreenState
                           _InfoRow(label: 'Order ref',
                               value: displayRef,
                               mono: true),
+                          _InfoRow(
+                              label: 'Order status',
+                              value: o.status.toUpperCase(),
+                              valueColor: o.status == OrderStatus.cancelled
+                                  ? AppColors.error
+                                  : o.status == OrderStatus.pending
+                                      ? AppColors.brandGold
+                                      : AppColors.brandGreenPrimary),
                           _InfoRow(label: 'Shop ID',
                               value: o.shopId,
                               mono: true),
@@ -340,7 +348,7 @@ class _AdminOrderDetailScreenState
                               label: 'Method',
                               value: _methodLabel(o.paymentMethod)),
                           _InfoRow(
-                              label: 'Status',
+                              label: 'Payment status',
                               value: o.paymentStatus.toUpperCase(),
                               valueColor: o.paymentStatus == PaymentStatus.paid
                                   ? AppColors.statusDelivered
