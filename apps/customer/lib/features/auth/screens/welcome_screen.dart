@@ -25,7 +25,7 @@ class WelcomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Column(
             children: [
-              const SizedBox(height: AppSpacing.xl),
+              const Spacer(flex: 3),
 
               // Logo
               Row(
@@ -65,35 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                     .copyWith(color: AppColors.lightOnSurfaceVariant),
               ),
 
-              const Spacer(flex: 2),
-
-              Text(
-                'Welcome to SpazaLink',
-                textAlign: TextAlign.center,
-                style: AppTypography.headlineSmall
-                    .copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'The smart way for spaza shops to order in bulk and save more.',
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium
-                    .copyWith(color: AppColors.lightOnSurfaceVariant, height: 1.4),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Carousel dots (decorative)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _dot(true),
-                  _dot(false),
-                  _dot(false),
-                ],
-              ),
-
-              const Spacer(),
+              const Spacer(flex: 3),
 
               SpazaButton(
                 label: 'Login',
@@ -147,16 +119,4 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _dot(bool active) => AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 3),
-        width: active ? 22 : 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: active
-              ? AppColors.brandGreenPrimary
-              : AppColors.lightOutlineVariant,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-        ),
-      );
 }
