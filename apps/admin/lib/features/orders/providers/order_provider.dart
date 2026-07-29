@@ -51,16 +51,23 @@ class OrderActionNotifier extends Notifier<OrderActionState> {
         status: status,
         adminId: adminId,
       );
+      _refresh();
       state = OrderActionSuccess();
     } catch (e) {
       state = OrderActionError(e.toString());
     }
   }
 
+  void _refresh() {
+    ref.invalidate(adminOrdersProvider);
+    ref.invalidate(adminOrderDetailProvider);
+  }
+
   Future<void> cancel(String orderId) async {
     state = OrderActionLoading();
     try {
       await _repo.cancelOrder(orderId);
+      _refresh();
       state = OrderActionSuccess();
     } catch (e) {
       state = OrderActionError(e.toString());
