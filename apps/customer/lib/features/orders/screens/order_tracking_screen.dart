@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../auth/providers/auth_provider.dart';
 import '../providers/order_provider.dart';
-import '../widgets/order_status_badge.dart';
 
 class OrderTrackingScreen extends ConsumerWidget {
-  const OrderTrackingScreen({
-    super.key,
-    required this.orderId,
-    this.order,
-  });
+  const OrderTrackingScreen({super.key, required this.orderId, this.order});
 
   final String orderId;
   final OrderModel? order;
@@ -19,309 +16,360 @@ class OrderTrackingScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final liveAsync = ref.watch(singleOrderProvider(orderId));
     final o = liveAsync.valueOrNull ?? order;
-
-    if (o == null) {
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.brandGreenPrimary,
-          foregroundColor: AppColors.white,
-          title: const Text('Tracking'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.brandGreenPrimary),
-        ),
-      );
-    }
+    final shop = ref.watch(currentShopProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.brandGreenPrimary,
-        foregroundColor: AppColors.white,
+        backgroundColor: AppColors.lightBackground,
+        surfaceTintColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightOnSurface,
         elevation: 0,
-        title: const Text(
-          'Track Delivery',
-          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.w700),
-        ),
+        centerTitle: true,
+        title: const Text('Order Tracking',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.md),
-            child: OrderStatusBadge(status: o.status),
+          IconButton(
+            icon: const Icon(Icons.headset_mic_outlined),
+            onPressed: () => _call(),
+            tooltip: 'Support',
           ),
         ],
       ),
-      body: RefreshIndicator(
-        color: AppColors.brandGreenPrimary,
-        onRefresh: () async => ref.invalidate(singleOrderProvider(orderId)),
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.screenPaddingH),
-          children: [
-            // ── Map placeholder ──────────────────────────────────────────────
-            _MapPlaceholder(status: o.status),
-
-            const SizedBox(height: AppSpacing.x3l),
-
-            // ── Delivery status ──────────────────────────────────────────────
-            _DeliveryStatusCard(order: o),
-
-            const SizedBox(height: AppSpacing.x3l),
-
-            // ── Delivery address ─────────────────────────────────────────────
-            _InfoCard(
-              icon: Icons.location_on_outlined,
-              title: 'Delivering to',
-              body: o.deliveryAddress,
+      body: o == null
+          ? const Center(
+              child: CircularProgressIndicator(
+                  color: AppColors.brandGreenPrimary))
+          : RefreshIndicator(
+              color: AppColors.brandGreenPrimary,
+              onRefresh: () async =>
+                  ref.invalidate(singleOrderProvider(orderId)),
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: [
+                  _OrderSummaryCard(order: o),
+                  const SizedBox(height: AppSpacing.xl),
+                  _Timeline(status: o.status, placedAt: o.placedAt),
+                  const SizedBox(height: AppSpacing.xl),
+                  _DeliveryDetails(order: o, shop: shop),
+                  const SizedBox(height: AppSpacing.x3l),
+                ],
+              ),
             ),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // ── Order ref ────────────────────────────────────────────────────
-            _InfoCard(
-              icon: Icons.receipt_outlined,
-              title: 'Order reference',
-              body: o.orderNumber.isNotEmpty ? o.orderNumber : o.localUuid,
-              bodyStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            ),
-
-            const SizedBox(height: AppSpacing.x5l),
-          ],
-        ),
-      ),
     );
+  }
+
+  static Future<void> _call() async {
+    final uri = Uri(scheme: 'tel', path: '0800000000');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 }
 
-// ── Sub-widgets ───────────────────────────────────────────────────────────────
+// ── Steps ─────────────────────────────────────────────────────────────────────
 
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({required this.status});
+class _Step {
+  const _Step(this.status, this.label, this.icon);
   final String status;
+  final String label;
+  final IconData icon;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final isDelivered = status == OrderStatus.delivered;
+const _steps = [
+  _Step(OrderStatus.pending, 'Order received', Icons.receipt_long_rounded),
+  _Step(OrderStatus.confirmed, 'Order confirmed', Icons.thumb_up_rounded),
+  _Step(OrderStatus.preparing, 'Preparing your order', Icons.inventory_2_rounded),
+  _Step(OrderStatus.outForDelivery, 'Out for delivery',
+      Icons.local_shipping_rounded),
+  _Step(OrderStatus.delivered, 'Delivered', Icons.home_rounded),
+];
 
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: AppColors.brandGreenSurface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.lightOutlineVariant),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Grid lines to suggest a map
-          CustomPaint(
-            painter: _MapGridPainter(),
-            child: const SizedBox.expand(),
-          ),
-
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                isDelivered
-                    ? Icons.check_circle_rounded
-                    : Icons.local_shipping_rounded,
-                size: 48,
-                color: AppColors.brandGreenPrimary,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                isDelivered
-                    ? 'Order delivered!'
-                    : 'Live map coming soon',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.brandGreenPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (!isDelivered)
-                Text(
-                  'Driver location tracking in Phase 9',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.lightOnSurfaceVariant,
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
+int _indexFor(String status) {
+  switch (status) {
+    case OrderStatus.pending:
+      return 0;
+    case OrderStatus.confirmed:
+      return 1;
+    case OrderStatus.preparing:
+    case AppConstants.orderStatusPacked:
+      return 2;
+    case OrderStatus.outForDelivery:
+    case AppConstants.orderStatusAssigned:
+      return 3;
+    case OrderStatus.delivered:
+      return 4;
+    default:
+      return 0;
   }
 }
 
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.brandGreenLight.withValues(alpha: 0.15)
-      ..strokeWidth = 1;
-
-    const step = 30.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
+String _statusLabel(String status) {
+  switch (status) {
+    case OrderStatus.confirmed:
+      return 'Confirmed';
+    case OrderStatus.preparing:
+    case AppConstants.orderStatusPacked:
+      return 'Preparing';
+    case OrderStatus.outForDelivery:
+    case AppConstants.orderStatusAssigned:
+      return 'Out for delivery';
+    case OrderStatus.delivered:
+      return 'Delivered';
+    case AppConstants.orderStatusCancelled:
+      return 'Cancelled';
+    default:
+      return 'Order received';
   }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
-class _DeliveryStatusCard extends StatelessWidget {
-  const _DeliveryStatusCard({required this.order});
+String _fmt(DateTime d) {
+  const months = [
+    'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
+  ];
+  final h = d.hour.toString().padLeft(2, '0');
+  final m = d.minute.toString().padLeft(2, '0');
+  return '${d.day} ${months[d.month - 1]} ${d.year}, $h:$m';
+}
+
+// ── Order summary (dark green card) ────────────────────────────────────────────
+
+class _OrderSummaryCard extends StatelessWidget {
+  const _OrderSummaryCard({required this.order});
   final OrderModel order;
 
-  static const _deliverySteps = [
-    (OrderStatus.outForDelivery, 'Driver assigned', Icons.person_outlined),
-    (OrderStatus.outForDelivery, 'On the way', Icons.local_shipping_outlined),
-    (OrderStatus.delivered, 'Delivered', Icons.verified_rounded),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final isDelivered = order.status == OrderStatus.delivered;
-    final activeIndex = isDelivered ? 2 : 1;
+    final ref = order.orderNumber.isNotEmpty
+        ? order.orderNumber
+        : order.localUuid.split('-').first.toUpperCase();
+    final payment = order.paymentMethod == AppConstants.paymentEft
+        ? 'EFT / Bank transfer'
+        : 'Pay on delivery';
 
     return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.lightOutlineVariant),
+        color: AppColors.brandGreenDark,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Delivery Status',
-            style: AppTypography.titleSmall
-                .copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Expanded(
+                child: Text('Order #$ref',
+                    style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.white, fontWeight: FontWeight.w800)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.brandGold,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                ),
+                child: Text(_statusLabel(order.status),
+                    style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.brandGreenDark,
+                        fontWeight: FontWeight.w800)),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          ...List.generate(_deliverySteps.length, (i) {
-            final step = _deliverySteps[i];
-            final isDone = i < activeIndex;
-            final isActive = i == activeIndex;
-            final isLast = i == _deliverySteps.length - 1;
-            final color = isDone || isActive
-                ? AppColors.brandGreenPrimary
-                : AppColors.lightOutline;
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDone || isActive
-                              ? AppColors.brandGreenPrimary
-                              : AppColors.lightSurfaceVariant,
-                          border: Border.all(color: color, width: 2),
-                        ),
-                        child: isDone
-                            ? const Icon(Icons.check_rounded,
-                                size: 12, color: AppColors.white)
-                            : isActive
-                                ? Icon(step.$3,
-                                    size: 10, color: AppColors.white)
-                                : null,
-                      ),
-                      if (!isLast)
-                        Container(
-                          width: 2,
-                          height: 32,
-                          color: isDone
-                              ? AppColors.brandGreenPrimary
-                              : AppColors.lightOutline,
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: 1,
-                    bottom: isLast ? 0 : AppSpacing.lg,
-                  ),
-                  child: Text(
-                    step.$2,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDone || isActive
-                          ? AppColors.lightOnSurface
-                          : AppColors.lightOnSurfaceVariant,
-                      fontWeight:
-                          isActive ? FontWeight.w700 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }),
+          _row('Order placed', _fmt(order.placedAt)),
+          const SizedBox(height: AppSpacing.sm),
+          _row('Total amount', CurrencyFormatter.format(order.totalCents)),
+          const SizedBox(height: AppSpacing.sm),
+          _row('Payment method', payment),
         ],
       ),
     );
   }
+
+  Widget _row(String label, String value) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(label,
+                style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.7))),
+          ),
+          Expanded(
+            child: Text(value,
+                style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      );
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.body,
-    this.bodyStyle,
-  });
+// ── Timeline ──────────────────────────────────────────────────────────────────
 
-  final IconData icon;
-  final String title;
-  final String body;
-  final TextStyle? bodyStyle;
+class _Timeline extends StatelessWidget {
+  const _Timeline({required this.status, required this.placedAt});
+  final String status;
+  final DateTime placedAt;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.lightOutlineVariant),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: AppColors.brandGreenPrimary),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.lightOnSurfaceVariant,
+    final current = _indexFor(status);
+    return Column(
+      children: List.generate(_steps.length, (i) {
+        final step = _steps[i];
+        final isDone = i < current;
+        final isCurrent = i == current;
+        final isLast = i == _steps.length - 1;
+        final active = isDone || isCurrent;
+
+        // Secondary line: real time for the first step, else status word.
+        final secondary = i == 0
+            ? _fmt(placedAt)
+            : isDone
+                ? 'Completed'
+                : isCurrent
+                    ? 'In progress'
+                    : 'Pending';
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: active
+                          ? AppColors.brandGreenPrimary
+                          : AppColors.lightSurfaceVariant,
+                    ),
+                    child: Icon(
+                      isDone ? Icons.check_rounded : step.icon,
+                      size: isDone ? 20 : 16,
+                      color:
+                          active ? AppColors.white : AppColors.lightOnSurfaceVariant,
+                    ),
+                  ),
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: 2,
+                        color: isDone
+                            ? AppColors.brandGreenPrimary
+                            : AppColors.lightOutlineVariant,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.xl),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(step.label,
+                          style: AppTypography.bodyLarge.copyWith(
+                            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                            color: active
+                                ? AppColors.lightOnSurface
+                                : AppColors.lightOnSurfaceVariant,
+                          )),
+                      const SizedBox(height: 2),
+                      Text(secondary,
+                          style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.lightOnSurfaceVariant)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: bodyStyle ??
-                      AppTypography.bodyMedium.copyWith(
-                        color: AppColors.lightOnSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ── Delivery details ───────────────────────────────────────────────────────────
+
+class _DeliveryDetails extends StatelessWidget {
+  const _DeliveryDetails({required this.order, this.shop});
+  final OrderModel order;
+  final ShopModel? shop;
+
+  @override
+  Widget build(BuildContext context) {
+    final eta = order.scheduledDeliveryDate != null
+        ? _fmt(order.scheduledDeliveryDate!)
+        : 'We\'ll confirm your delivery window soon';
+    final address = order.deliveryAddress.isNotEmpty
+        ? order.deliveryAddress
+        : [shop?.physicalAddress ?? '', shop?.city ?? '']
+            .where((s) => s.isNotEmpty)
+            .join(', ');
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.lightSurfaceVariant,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Delivery details',
+              style:
+                  AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Expected delivery time',
+              style: AppTypography.bodySmall
+                  .copyWith(color: AppColors.lightOnSurfaceVariant)),
+          const SizedBox(height: 2),
+          Text(eta,
+              style: AppTypography.bodyLarge
+                  .copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Delivery to',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.lightOnSurfaceVariant)),
+                    const SizedBox(height: 2),
+                    Text(shop?.shopName ?? 'Your shop',
+                        style: AppTypography.bodyLarge
+                            .copyWith(fontWeight: FontWeight.w700)),
+                    if (address.isNotEmpty)
+                      Text(address,
+                          style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.lightOnSurfaceVariant)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              InkWell(
+                onTap: OrderTrackingScreen._call,
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    color: AppColors.brandGreenPrimary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.call_rounded,
+                      color: AppColors.white, size: 22),
+                ),
+              ),
+            ],
           ),
         ],
       ),
