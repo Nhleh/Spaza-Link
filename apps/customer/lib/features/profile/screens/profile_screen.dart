@@ -113,11 +113,11 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     );
                     if (confirm != true) return;
+                    // Just sign out — the router's redirect automatically sends
+                    // signed-out users to the Welcome screen (Login + Register).
+                    // Navigating manually here as well raced the redirect and
+                    // left a blank/black screen, so we let the redirect do it.
                     await signOut(ref);
-                    // Route through the branded splash, which then forwards to
-                    // the Welcome screen (Login + Register). Splash has a solid
-                    // background, so there's no black flash on the way out.
-                    if (context.mounted) context.go(RouteConstants.splash);
                   },
                 ),
               ],

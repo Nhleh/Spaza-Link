@@ -110,6 +110,9 @@ class PlaceOrderNotifier extends Notifier<PlaceOrderState> {
       }
 
       await cartRepo.clearCart(shopId);
+      // Refresh the (one-shot) orders stream so the new order shows on the
+      // Orders tab immediately.
+      ref.invalidate(shopOrdersProvider);
       state = PlaceOrderSuccess(saved);
     } catch (e) {
       state = PlaceOrderError(e.toString());
