@@ -94,29 +94,11 @@ class ProfileScreen extends ConsumerWidget {
                   label: 'Logout',
                   danger: true,
                   onTap: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Log out?'),
-                        content: const Text('You can sign back in any time.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Logout',
-                                style: TextStyle(color: AppColors.error)),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm != true) return;
-                    // Just sign out — the router's redirect automatically sends
-                    // signed-out users to the Welcome screen (Login + Register).
-                    // Navigating manually here as well raced the redirect and
-                    // left a blank/black screen, so we let the redirect do it.
+                    // No confirmation dialog on purpose: on the software-GPU
+                    // emulator the dialog's translucent barrier renders as
+                    // opaque black and sticks (a swiftshader compositing bug).
+                    // Logout is reversible, so sign out directly — the router
+                    // redirect then sends the user to Welcome (Login/Register).
                     await signOut(ref);
                   },
                 ),
