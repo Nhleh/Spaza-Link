@@ -20,6 +20,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/main_shell.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/profile_edit_screens.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_tracking_screen.dart';
 import '../../features/orders/screens/orders_screen.dart';
@@ -189,10 +190,35 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const ProfileScreen(),
                 routes: [
                   GoRoute(
-                    path: 'edit',
-                    name: 'profile-edit',
+                    path: 'shop-info',
+                    name: 'profile-shop-info',
+                    builder: (context, state) => const ShopInformationScreen(),
+                  ),
+                  GoRoute(
+                    path: 'delivery-addresses',
+                    name: 'profile-delivery',
+                    builder: (context, state) => const DeliveryAddressesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'payment-methods',
+                    name: 'profile-payment',
+                    builder: (context, state) => const PaymentMethodsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'change-password',
+                    name: 'profile-password',
+                    builder: (context, state) => const ChangePasswordScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    name: 'profile-notifications',
                     builder: (context, state) =>
-                        const _PlaceholderScreen(title: 'Edit Profile', phase: 8),
+                        const NotificationSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'support',
+                    name: 'profile-support',
+                    builder: (context, state) => const HelpSupportScreen(),
                   ),
                 ],
               ),
