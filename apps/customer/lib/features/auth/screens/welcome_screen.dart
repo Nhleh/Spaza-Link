@@ -65,12 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                     .copyWith(color: AppColors.lightOnSurfaceVariant),
               ),
 
-              const SizedBox(height: AppSpacing.xl),
-
-              // Hero illustration (truck + spaza shop)
-              const _HeroScene(),
-
-              const SizedBox(height: AppSpacing.x3l),
+              const Spacer(flex: 2),
 
               Text(
                 'Welcome to SpazaLink',
@@ -164,69 +159,4 @@ class WelcomeScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
         ),
       );
-}
-
-/// Icon-based hero: a delivery truck arriving at a spaza shop, on a soft card.
-/// (Swap for an illustration asset later for a pixel-perfect match.)
-class _HeroScene extends StatelessWidget {
-  const _HeroScene();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 200,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.brandGreenSurface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-      ),
-      child: Stack(
-        children: [
-          // Shop sign
-          Positioned(
-            top: 22,
-            right: 28,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.brandGreenPrimary),
-              ),
-              child: Text('SPAZA SHOP',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.brandGreenDark,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  )),
-            ),
-          ),
-          // Shop building
-          const Positioned(
-            bottom: 26,
-            right: 30,
-            child: Icon(Icons.storefront_rounded,
-                color: AppColors.brandGreenPrimary, size: 96),
-          ),
-          // Delivery truck
-          const Positioned(
-            bottom: 30,
-            left: 24,
-            child: Icon(Icons.local_shipping_rounded,
-                color: AppColors.brandGold, size: 80),
-          ),
-          // Ground line
-          Positioned(
-            bottom: 24,
-            left: 20,
-            right: 20,
-            child: Container(
-              height: 2,
-              color: AppColors.brandGreenPrimary.withValues(alpha: 0.25),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
