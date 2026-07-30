@@ -17,6 +17,18 @@ final _ownerProfileProvider =
       .maybeSingle();
 });
 
+/// This shop's order history (newest first).
+final _shopOrdersProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>(
+        (ref, shopId) async {
+  final rows = await Supabase.instance.client
+      .from('orders')
+      .select('id,status,total_cents,created_at')
+      .eq('shop_id', shopId)
+      .order('created_at', ascending: false);
+  return (rows as List).cast<Map<String, dynamic>>();
+});
+
 class AdminShopDetailScreen extends ConsumerWidget {
   const AdminShopDetailScreen({super.key, required this.shopId, this.shop});
 
@@ -189,6 +201,10 @@ class _Body extends ConsumerWidget {
                 _paymentLabel((p?['preferences'] as Map?)?['payment_method'])),
           ]),
         ),
+        const SizedBox(height: 16),
+
+        // Order history for this shop
+        _OrderHistory(shopId: shop.id),
       ],
     );
   }
@@ -298,4 +314,141 @@ class _Body extends ConsumerWidget {
         return ('PENDING', AppColors.brandGold);
     }
   }
+}
+
+class _OrderHistory extends ConsumerWidget {
+  const _OrderHistory({required this.shopId});
+  final String shopId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(_shopOrdersProvider(shopId));
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.adminDarkSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.adminDarkOutline, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Expanded(
+              child: Text('ORDER HISTORY',
+                  style: TextStyle(
+                      color: AppColors.darkOnSurfaceVariant,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6)),
+            ),
+            async.maybeWhen(
+              data: (o) => Text('${o.length} order${o.length == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                      color: AppColors.darkOnSurfaceVariant, fontSize: 11.5)),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.brandGreenPrimary)),
+            ),
+            error: (e, _) => Text('Could not load orders: $e',
+                style: const TextStyle(color: AppColors.error, fontSize: 12.5)),
+            data: (orders) {
+              if (orders.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text('No orders yet.',
+                      style: TextStyle(color: AppColors.darkOnSurfaceVariant)),
+                );
+              }
+              return Column(
+                children: [for (final o in orders) _row(context, o)],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, Map<String, dynamic> o) {
+    final id = (o['id'] as String?) ?? '';
+    final ref = id.isEmpty ? '—' : id.split('-').first.toUpperCase();
+    final status = (o['status'] as String?) ?? 'pending';
+    final total = (o['total_cents'] as num?)?.toInt() ?? 0;
+    final created =
+        DateTime.tryParse(o['created_at']?.toString() ?? '')?.toLocal();
+    final color = _statusColor(status);
+    return InkWell(
+      onTap: id.isEmpty
+          ? null
+          : () => context.go('${RouteConstants.adminOrders}/$id'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('#$ref',
+                      style: const TextStyle(
+                          color: AppColors.darkOnSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13)),
+                  if (created != null) ...[
+                    const SizedBox(height: 2),
+                    Text(_fmt(created),
+                        style: const TextStyle(
+                            color: AppColors.darkOnSurfaceVariant,
+                            fontSize: 11.5)),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(status.toUpperCase(),
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(width: 12),
+            Text(CurrencyFormatter.format(total),
+                style: const TextStyle(
+                    color: AppColors.darkOnSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Color _statusColor(String s) {
+    switch (s) {
+      case 'delivered':
+        return AppColors.statusDelivered;
+      case 'cancelled':
+        return AppColors.error;
+      case 'pending':
+        return AppColors.brandGold;
+      default:
+        return AppColors.brandGreenPrimary;
+    }
+  }
+
+  static String _fmt(DateTime d) =>
+      '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }

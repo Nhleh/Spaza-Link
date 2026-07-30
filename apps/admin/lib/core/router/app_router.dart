@@ -12,6 +12,8 @@ import '../../features/orders/screens/admin_orders_screen.dart';
 import '../../features/products/screens/admin_product_form_screen.dart';
 import '../../features/products/screens/admin_products_screen.dart';
 import '../../features/messaging/screens/admin_communication_screen.dart';
+import '../../features/reports/screens/admin_reports_screen.dart';
+import '../../features/settings/screens/admin_settings_screen.dart';
 import '../../features/shell/admin_shell.dart';
 import '../../features/shops/screens/admin_shop_detail_screen.dart';
 import '../../features/shops/screens/admin_shops_screen.dart';
@@ -189,8 +191,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteConstants.adminReports,
                 name: 'admin-reports',
-                builder: (context, state) =>
-                    const _AdminPlaceholder(title: 'Reports'),
+                builder: (context, state) => const AdminReportsScreen(),
               ),
             ],
           ),
@@ -201,8 +202,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteConstants.adminSettings,
                 name: 'admin-settings',
-                builder: (context, state) =>
-                    const _AdminPlaceholder(title: 'Settings'),
+                builder: (context, state) => const AdminSettingsScreen(),
               ),
             ],
           ),
