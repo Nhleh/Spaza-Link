@@ -1,3 +1,6 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +39,13 @@ class AdminReportsScreen extends ConsumerWidget {
             style: TextStyle(
                 color: AppColors.darkOnSurface, fontWeight: FontWeight.w700)),
         actions: [
+          TextButton.icon(
+            onPressed: () => _downloadPdf(context, ref),
+            icon: const Icon(Icons.download_rounded,
+                size: 18, color: AppColors.brandGreenPrimary),
+            label: const Text('Download PDF',
+                style: TextStyle(color: AppColors.brandGreenPrimary)),
+          ),
           IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh_rounded,
@@ -225,6 +235,87 @@ class AdminReportsScreen extends ConsumerWidget {
         OrderStatus.pending => AppColors.brandGold,
         _ => AppColors.brandGreenPrimary,
       };
+
+  // ── PDF export via the browser's print-to-PDF (no plugin needed) ──────────
+  void _downloadPdf(BuildContext context, WidgetRef ref) {
+    final orders = ref.read(adminOrdersProvider(null)).valueOrNull ?? const [];
+    final products = ref.read(allProductsProvider).valueOrNull ?? const [];
+    final categories = ref.read(categoriesProvider).valueOrNull ?? const [];
+    if (orders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export yet.')));
+      return;
+    }
+    final htmlStr = _reportHtml(orders, products.length, categories.length);
+    final blob = html.Blob([htmlStr], 'text/html');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    // Opens a print-ready report in a new tab; it auto-triggers the browser's
+    // print dialog, where the user chooses "Save as PDF".
+    html.window.open(url, '_blank');
+  }
+
+  String _reportHtml(List<OrderModel> orders, int productCount, int catCount) {
+    final active =
+        orders.where((o) => o.status != OrderStatus.cancelled).toList();
+    final revenue = active.fold<int>(0, (s, o) => s + o.totalCents);
+    final aov = active.isEmpty ? 0 : (revenue / active.length).round();
+    final byStatus = <String, int>{};
+    for (final o in orders) {
+      byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
+    }
+    final recent = [...orders]
+      ..sort((a, b) => b.placedAt.compareTo(a.placedAt));
+
+    final statusRows = StringBuffer();
+    for (final s in _statusOrder) {
+      statusRows.write(
+          '<tr><td>${_statusLabel(s)}</td><td class="r">${byStatus[s] ?? 0}</td></tr>');
+    }
+    final recentRows = StringBuffer();
+    for (final o in recent.take(30)) {
+      final r = o.id.split('-').first.toUpperCase();
+      recentRows.write('<tr><td>#$r</td><td>${_fmtDate(o.placedAt)}</td>'
+          '<td>${_statusLabel(o.status)}</td>'
+          '<td class="r">${CurrencyFormatter.format(o.totalCents)}</td></tr>');
+    }
+
+    return '''
+<!doctype html><html><head><meta charset="utf-8"><title>SpazaLink Report</title>
+<style>
+ body{font-family:Arial,Helvetica,sans-serif;color:#12211a;margin:32px;}
+ h1{color:#1B5E20;margin:0 0 2px;font-size:22px;}
+ h3{margin:22px 0 8px;font-size:14px;}
+ .sub{color:#777;margin:0 0 20px;font-size:12px;}
+ .kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
+ .kpi{border:1px solid #ddd;border-radius:8px;padding:10px 14px;min-width:120px;}
+ .kpi .v{font-size:20px;font-weight:800;}
+ .kpi .l{font-size:11px;color:#777;}
+ table{width:100%;border-collapse:collapse;}
+ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #eee;font-size:12.5px;}
+ th{color:#777;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
+ .r{text-align:right;}
+ @media print{body{margin:10px;}}
+</style></head><body>
+<h1>SpazaLink &mdash; Business Report</h1>
+<p class="sub">Generated ${_fmtDate(DateTime.now())}</p>
+<div class="kpis">
+ <div class="kpi"><div class="v">${orders.length}</div><div class="l">Total orders</div></div>
+ <div class="kpi"><div class="v">${CurrencyFormatter.format(revenue)}</div><div class="l">Revenue</div></div>
+ <div class="kpi"><div class="v">${CurrencyFormatter.format(aov)}</div><div class="l">Avg order value</div></div>
+ <div class="kpi"><div class="v">$productCount</div><div class="l">Products</div></div>
+ <div class="kpi"><div class="v">$catCount</div><div class="l">Categories</div></div>
+</div>
+<h3>Orders by status</h3>
+<table><thead><tr><th>Status</th><th class="r">Count</th></tr></thead><tbody>$statusRows</tbody></table>
+<h3>Recent orders</h3>
+<table><thead><tr><th>Ref</th><th>Date</th><th>Status</th><th class="r">Total</th></tr></thead><tbody>$recentRows</tbody></table>
+<script>window.onload=function(){setTimeout(function(){window.print();},350);};</script>
+</body></html>
+''';
+  }
+
+  static String _fmtDate(DateTime d) =>
+      '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }
 
 class _RecentOrderRow extends StatelessWidget {

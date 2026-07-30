@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/admin_auth_provider.dart';
@@ -89,8 +90,10 @@ class AdminSettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      // The router redirect sends the signed-out admin back to the login screen.
       await adminSignOut(ref);
+      // Navigate explicitly — the auth-state redirect can lag on web, leaving
+      // the user sitting on Settings after the session is already cleared.
+      if (context.mounted) context.go(RouteConstants.adminLogin);
     }
   }
 
