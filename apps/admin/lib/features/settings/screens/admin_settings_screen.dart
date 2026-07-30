@@ -1,6 +1,8 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/admin_auth_provider.dart';
@@ -91,9 +93,11 @@ class AdminSettingsScreen extends ConsumerWidget {
     );
     if (ok == true) {
       await adminSignOut(ref);
-      // Navigate explicitly — the auth-state redirect can lag on web, leaving
-      // the user sitting on Settings after the session is already cleared.
-      if (context.mounted) context.go(RouteConstants.adminLogin);
+      // Hard-reload so the app re-initialises with the cleared session and the
+      // router lands on Login. A plain context.go raced the auth-state stream
+      // (uid still momentarily non-null) and the redirect bounced back to the
+      // dashboard — a reload sidesteps that entirely.
+      html.window.location.reload();
     }
   }
 
