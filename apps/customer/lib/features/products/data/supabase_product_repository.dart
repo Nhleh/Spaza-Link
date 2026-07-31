@@ -82,8 +82,15 @@ class SupabaseProductRepository implements ProductRepository {
         sku: (d['sku'] as String?) ?? '',
         barcode: d['barcode'] as String?,
         imageUrls: (d['image_urls'] as List?)?.cast<String>() ?? const [],
-        priceCents: (d['price_cents'] as num?)?.toInt() ?? 0,
-        salePriceCents: (d['sale_price_cents'] as num?)?.toInt(),
+        // Prices in the DB are the admin's BASE price. Customers pay the base
+        // price plus the 15% markup (the platform's profit), so mark it up here
+        // once — every downstream view (cards, cart, checkout, orders) then uses
+        // the customer-facing price automatically.
+        priceCents: AppConstants.customerPriceCents(
+            (d['price_cents'] as num?)?.toInt() ?? 0),
+        salePriceCents: d['sale_price_cents'] == null
+            ? null
+            : AppConstants.customerPriceCents((d['sale_price_cents'] as num).toInt()),
         packSize: (d['pack_size'] as String?) ?? '',
         stockQuantity: (d['stock_quantity'] as num?)?.toInt() ?? 0,
         weightGrams: (d['weight_grams'] as num?)?.toInt(),

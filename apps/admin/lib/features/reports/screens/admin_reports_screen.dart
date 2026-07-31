@@ -1,6 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -74,6 +75,12 @@ class AdminReportsScreen extends ConsumerWidget {
           final revenue = active.fold<int>(0, (s, o) => s + o.totalCents);
           final aov =
               active.isEmpty ? 0 : (revenue / active.length).round();
+          // Profit = the 15% markup portion of what customers paid
+          // (customer price = base × 1.15, so profit = revenue × 0.15/1.15).
+          final profit = (revenue *
+                  AppConstants.productMarkup /
+                  (1 + AppConstants.productMarkup))
+              .round();
           final byStatus = <String, int>{};
           for (final o in orders) {
             byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
@@ -92,6 +99,10 @@ class AdminReportsScreen extends ConsumerWidget {
                       Icons.receipt_long_rounded),
                   _kpi('Revenue', CurrencyFormatter.formatNoDecimals(revenue),
                       Icons.payments_rounded),
+                  _kpi('Profit (15%)',
+                      CurrencyFormatter.formatNoDecimals(profit),
+                      Icons.savings_rounded,
+                      highlight: true),
                   _kpi('Avg order value',
                       CurrencyFormatter.formatNoDecimals(aov),
                       Icons.trending_up_rounded),
@@ -102,6 +113,30 @@ class AdminReportsScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
+              LayoutBuilder(builder: (context, c) {
+                final revenueCard = _card('Revenue — last 7 days',
+                    SizedBox(height: 220, child: _RevenueChart(orders: orders)));
+                final statusCard = _card('Order status split',
+                    SizedBox(height: 220, child: _StatusPie(byStatus: byStatus)));
+                if (c.maxWidth > 720) {
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: revenueCard),
+                        const SizedBox(width: 16),
+                        Expanded(child: statusCard),
+                      ],
+                    ),
+                  );
+                }
+                return Column(children: [
+                  revenueCard,
+                  const SizedBox(height: 16),
+                  statusCard,
+                ]);
+              }),
+              const SizedBox(height: 16),
               _card(
                 'Orders by status',
                 Column(
@@ -136,13 +171,21 @@ class AdminReportsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _kpi(String label, String value, IconData icon) => Container(
+  Widget _kpi(String label, String value, IconData icon,
+          {bool highlight = false}) =>
+      Container(
         width: 200,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.adminDarkSurface,
+          color: highlight
+              ? AppColors.brandGreenPrimary.withValues(alpha: 0.12)
+              : AppColors.adminDarkSurface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.adminDarkOutline, width: 0.5),
+          border: Border.all(
+              color: highlight
+                  ? AppColors.brandGreenPrimary.withValues(alpha: 0.5)
+                  : AppColors.adminDarkOutline,
+              width: highlight ? 1 : 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,6 +302,10 @@ class AdminReportsScreen extends ConsumerWidget {
         orders.where((o) => o.status != OrderStatus.cancelled).toList();
     final revenue = active.fold<int>(0, (s, o) => s + o.totalCents);
     final aov = active.isEmpty ? 0 : (revenue / active.length).round();
+    final profit = (revenue *
+            AppConstants.productMarkup /
+            (1 + AppConstants.productMarkup))
+        .round();
     final byStatus = <String, int>{};
     for (final o in orders) {
       byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
@@ -301,6 +348,7 @@ class AdminReportsScreen extends ConsumerWidget {
 <div class="kpis">
  <div class="kpi"><div class="v">${orders.length}</div><div class="l">Total orders</div></div>
  <div class="kpi"><div class="v">${CurrencyFormatter.format(revenue)}</div><div class="l">Revenue</div></div>
+ <div class="kpi" style="border-color:#1B5E20;background:#f1f8f2"><div class="v" style="color:#1B5E20">${CurrencyFormatter.format(profit)}</div><div class="l">Profit (15% markup)</div></div>
  <div class="kpi"><div class="v">${CurrencyFormatter.format(aov)}</div><div class="l">Avg order value</div></div>
  <div class="kpi"><div class="v">$productCount</div><div class="l">Products</div></div>
  <div class="kpi"><div class="v">$catCount</div><div class="l">Categories</div></div>
@@ -374,4 +422,175 @@ class _RecentOrderRow extends StatelessWidget {
 
   static String _fmt(DateTime d) =>
       '${d.day}/${d.month}/${d.year} ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+}
+
+/// Bar chart of revenue for each of the last 7 days.
+class _RevenueChart extends StatelessWidget {
+  const _RevenueChart({required this.orders});
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
+    final daily = <double>[
+      for (final day in days)
+        orders
+                .where((o) =>
+                    o.status != OrderStatus.cancelled && _sameDay(o.placedAt, day))
+                .fold<int>(0, (s, o) => s + o.totalCents) /
+            100.0,
+    ];
+    final maxV = daily.fold<double>(0, (m, v) => v > m ? v : m);
+    final maxY = maxV <= 0 ? 100.0 : maxV * 1.25;
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxY,
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
+              'R${rod.toY.toStringAsFixed(0)}',
+              const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11),
+            ),
+          ),
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 42,
+              getTitlesWidget: (v, meta) => Text('R${v.toInt()}',
+                  style: const TextStyle(
+                      color: AppColors.darkOnSurfaceVariant, fontSize: 9)),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (v, meta) {
+                final i = v.toInt();
+                final label = (i >= 0 && i < days.length)
+                    ? '${days[i].day}/${days[i].month}'
+                    : '';
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(label,
+                      style: const TextStyle(
+                          color: AppColors.darkOnSurfaceVariant, fontSize: 9)),
+                );
+              },
+            ),
+          ),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (v) => const FlLine(
+              color: AppColors.adminDarkOutline, strokeWidth: 0.4),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: [
+          for (int i = 0; i < daily.length; i++)
+            BarChartGroupData(x: i, barRods: [
+              BarChartRodData(
+                toY: daily[i],
+                width: 16,
+                color: AppColors.brandGreenPrimary,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(4)),
+              ),
+            ]),
+        ],
+      ),
+    );
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+/// Pie chart of the order-status distribution, with a legend.
+class _StatusPie extends StatelessWidget {
+  const _StatusPie({required this.byStatus});
+  final Map<String, int> byStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = AdminReportsScreen._statusOrder
+        .where((s) => (byStatus[s] ?? 0) > 0)
+        .toList();
+    final total = byStatus.values.fold<int>(0, (a, b) => a + b);
+    if (total == 0) {
+      return const Center(
+        child: Text('No orders yet.',
+            style: TextStyle(color: AppColors.darkOnSurfaceVariant)),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 30,
+              sections: [
+                for (final s in entries)
+                  PieChartSectionData(
+                    value: (byStatus[s] ?? 0).toDouble(),
+                    color: AdminReportsScreen._statusColor(s),
+                    title: '${byStatus[s]}',
+                    radius: 50,
+                    titleStyle: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final s in entries)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                          color: AdminReportsScreen._statusColor(s),
+                          shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(AdminReportsScreen._statusLabel(s),
+                          style: const TextStyle(
+                              color: AppColors.darkOnSurface, fontSize: 11),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ]),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

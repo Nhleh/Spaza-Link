@@ -17,6 +17,15 @@ abstract final class AppConstants {
   /// Orders at or above this amount (cents) qualify for free delivery (R1,750.00).
   static const int freeDeliveryThresholdCents = 175000;
 
+  /// Markup added to the admin's base price to get the customer-facing price.
+  /// The admin enters a base price; customers pay base × (1 + markup) and the
+  /// markup is the platform's profit. e.g. base R100 → customer pays R115.
+  static const double productMarkup = 0.15; // 15%
+
+  /// Marks a base price (cents) up to the customer-facing price (cents).
+  static int customerPriceCents(int baseCents) =>
+      (baseCents * (1 + productMarkup)).round();
+
   // ── Order number format ────────────────────────────────────────────────────
 
   /// Prefix for all SpazaLink order numbers.
