@@ -12,16 +12,18 @@ abstract final class AppColors {
   // ── Brand ──────────────────────────────────────────────────────────────────
 
   /// Darkest brand green — used in the "Spaza" wordmark and tagline.
-  static const Color brandGreenDark = Color(0xFF1B5E20);
+  /// Official brand palette (spazalink.co.za): dark-green.
+  static const Color brandGreenDark = Color(0xFF066837);
 
   /// Primary brand green — used in the chain icon and primary UI elements.
-  static const Color brandGreenPrimary = Color(0xFF2E7D32);
+  /// Official brand palette: primary-green.
+  static const Color brandGreenPrimary = Color(0xFF0B8F47);
 
   /// Medium green — headers, active states.
-  static const Color brandGreenMedium = Color(0xFF388E3C);
+  static const Color brandGreenMedium = Color(0xFF0FA050);
 
   /// Light green — highlights on the chain icon, hover states.
-  static const Color brandGreenLight = Color(0xFF4CAF50);
+  static const Color brandGreenLight = Color(0xFF34C471);
 
   /// Very light green tint — surface backgrounds.
   static const Color brandGreenSurface = Color(0xFFE8F5E9);
@@ -30,7 +32,8 @@ abstract final class AppColors {
   static const Color brandGreenSurfaceLight = Color(0xFFF1F8F2);
 
   /// Brand gold — used in the "Link" wordmark, chain bottom link, divider.
-  static const Color brandGold = Color(0xFFF9A825);
+  /// Official brand palette: gold.
+  static const Color brandGold = Color(0xFFF5B301);
 
   /// Lighter gold — highlights, savings callouts.
   static const Color brandGoldLight = Color(0xFFFDD835);
