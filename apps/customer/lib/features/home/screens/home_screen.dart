@@ -80,12 +80,7 @@ class HomeScreen extends ConsumerWidget {
 
                     // Top Deals
                     const SizedBox(height: AppSpacing.x3l),
-                    _SectionHeader(
-                      title: 'Top Deals',
-                      onSeeAll: () => context.go(RouteConstants.catalogue),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _FeaturedProductsGrid(),
+                    const _TopDealsSection(),
 
                     // Active buying pools (below Top Deals)
                     const SizedBox(height: AppSpacing.x3l),
@@ -555,6 +550,46 @@ class _CategoryRow extends ConsumerWidget {
 }
 
 // ── Featured Products Grid ────────────────────────────────────────────────────
+
+/// Top Deals: header with a 'View More' shown only when there are more than the
+/// six shown on the dashboard, then the 6-item grid.
+class _TopDealsSection extends ConsumerWidget {
+  const _TopDealsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count =
+        ref.watch(featuredProductsProvider).valueOrNull?.length ?? 0;
+    final hasMore = count > 6;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPaddingH),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Top Deals',
+                  style: AppTypography.titleMedium
+                      .copyWith(fontWeight: FontWeight.w700)),
+              if (hasMore)
+                TextButton(
+                  onPressed: () => context.push('/top-deals'),
+                  style: TextButton.styleFrom(
+                      foregroundColor: AppColors.brandGreenPrimary,
+                      padding: EdgeInsets.zero),
+                  child: const Text('View More →'),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _FeaturedProductsGrid(),
+      ],
+    );
+  }
+}
 
 class _FeaturedProductsGrid extends ConsumerWidget {
   const _FeaturedProductsGrid();

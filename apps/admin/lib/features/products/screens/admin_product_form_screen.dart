@@ -401,7 +401,7 @@ class _AdminProductFormScreenState
                           ),
                           const SizedBox(height: 8),
                           _ToggleRow(
-                            label: 'Featured product',
+                            label: 'Top Deal (show on Home)',
                             value: _isFeatured,
                             onChanged: (v) =>
                                 setState(() => _isFeatured = v),

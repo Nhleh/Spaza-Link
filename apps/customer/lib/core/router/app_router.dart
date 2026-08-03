@@ -29,6 +29,7 @@ import '../../features/pools/data/pools_repository.dart';
 import '../../features/pools/screens/pool_detail_screen.dart';
 import '../../features/pools/screens/pools_list_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
+import '../../features/products/screens/top_deals_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever auth or shop state changes.
@@ -264,6 +265,12 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
         path: RouteConstants.checkout,
         name: 'checkout',
         builder: (context, state) => const CheckoutScreen(),
+      ),
+
+      GoRoute(
+        path: '/top-deals',
+        name: 'top-deals',
+        builder: (context, state) => const TopDealsScreen(),
       ),
 
       // Buying pools (collective buying)
