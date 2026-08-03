@@ -25,6 +25,9 @@ import '../../features/profile/screens/profile_edit_screens.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_tracking_screen.dart';
 import '../../features/orders/screens/orders_screen.dart';
+import '../../features/pools/data/pools_repository.dart';
+import '../../features/pools/screens/pool_detail_screen.dart';
+import '../../features/pools/screens/pools_list_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 
@@ -261,6 +264,21 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
         path: RouteConstants.checkout,
         name: 'checkout',
         builder: (context, state) => const CheckoutScreen(),
+      ),
+
+      // Buying pools (collective buying)
+      GoRoute(
+        path: '/pools',
+        name: 'pools',
+        builder: (context, state) => const PoolsListScreen(),
+      ),
+      GoRoute(
+        path: '/pools/:poolId',
+        name: 'pool-detail',
+        builder: (context, state) => PoolDetailScreen(
+          poolId: state.pathParameters['poolId']!,
+          initial: state.extra as BuyingPool?,
+        ),
       ),
 
       GoRoute(

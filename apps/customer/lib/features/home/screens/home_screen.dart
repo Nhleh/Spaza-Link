@@ -69,6 +69,10 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
                     _NextDeliveryCard(shop: shop),
 
+                    // Buying pools promo
+                    const SizedBox(height: AppSpacing.lg),
+                    const _BuyingPoolsCard(),
+
                     // Shop by Category
                     const SizedBox(height: AppSpacing.x3l),
                     _SectionHeader(
@@ -393,6 +397,70 @@ class _NextDeliveryCard extends StatelessWidget {
                   Icons.chevron_right_rounded,
                   color: AppColors.lightOnSurfaceVariant,
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Buying Pools promo ────────────────────────────────────────────────────────
+
+class _BuyingPoolsCard extends StatelessWidget {
+  const _BuyingPoolsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
+      child: Material(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          onTap: () => context.push('/pools'),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF066837), Color(0xFF0B8F47)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: const Icon(Icons.groups_rounded,
+                      color: AppColors.white, size: 26),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Buying Pools',
+                          style: AppTypography.titleSmall.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      Text('Team up with other shops — up to 15% off',
+                          style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.9))),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: AppColors.white),
               ],
             ),
           ),

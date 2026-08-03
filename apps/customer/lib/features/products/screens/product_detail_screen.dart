@@ -6,6 +6,7 @@ import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
+import '../../pools/widgets/create_pool_sheet.dart';
 import '../../products/providers/product_provider.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
@@ -189,6 +190,11 @@ class _ProductDetailScreenState
                   // Price
                   _PriceSection(product: product),
 
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Start a buying pool
+                  _StartPoolTile(product: product),
+
                   const SizedBox(height: AppSpacing.x3l),
 
                   // Description
@@ -259,6 +265,59 @@ class _ProductDetailScreenState
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
+
+/// CTA to start a buying pool for this product (needs >= 50 units).
+class _StartPoolTile extends ConsumerWidget {
+  const _StartPoolTile({required this.product});
+  final ProductModel product;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      onTap: () => showCreatePoolSheet(context, ref, product),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.brandGreenSurfaceLight,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          border: Border.all(color: AppColors.brandGreenLight),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.brandGreenPrimary,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: const Icon(Icons.groups_rounded,
+                  color: AppColors.white, size: 24),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Start a buying pool',
+                      style: AppTypography.titleSmall
+                          .copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text('Add 50+ units and let other shops join — up to 15% off',
+                      style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.lightOnSurfaceVariant)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.brandGreenPrimary),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _ProductImageGallery extends StatelessWidget {
   const _ProductImageGallery({
