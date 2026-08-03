@@ -69,10 +69,6 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.lg),
                     _NextDeliveryCard(shop: shop),
 
-                    // Buying pools promo
-                    const SizedBox(height: AppSpacing.lg),
-                    const _BuyingPoolsCard(),
-
                     // Shop by Category
                     const SizedBox(height: AppSpacing.x3l),
                     _SectionHeader(
@@ -90,6 +86,10 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     const _FeaturedProductsGrid(),
+
+                    // Active buying pools (below Top Deals)
+                    const SizedBox(height: AppSpacing.x3l),
+                    const _BuyingPoolsCard(),
                   ],
                 ),
               ),
@@ -449,7 +449,7 @@ class _BuyingPoolsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Buying Pools',
+                      Text('Active Buying Pools',
                           style: AppTypography.titleSmall.copyWith(
                               color: AppColors.white,
                               fontWeight: FontWeight.w800)),

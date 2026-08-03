@@ -13,7 +13,7 @@
 
 create table if not exists public.buying_pools (
   id uuid primary key default gen_random_uuid(),
-  product_id       text not null references public.products(id) on delete cascade,
+  product_id       uuid not null references public.products(id) on delete cascade,
   product_name     text not null default '',
   product_image    text not null default '',
   -- customer-facing unit price (already includes the 15% markup) at creation.
