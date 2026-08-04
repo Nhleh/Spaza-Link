@@ -82,9 +82,9 @@ class ProductCard extends ConsumerWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
                   AppSpacing.sm,
-                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.sm,
                   AppSpacing.sm,
                 ),
                 child: Column(
@@ -92,7 +92,7 @@ class ProductCard extends ConsumerWidget {
                   children: [
                     Text(
                       product.name,
-                      style: AppTypography.bodySmall.copyWith(
+                      style: AppTypography.labelMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.lightOnSurface,
                       ),
@@ -100,7 +100,7 @@ class ProductCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (product.packSize.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 1),
                       Text(
                         product.packSize,
                         style: AppTypography.labelSmall.copyWith(
@@ -110,7 +110,7 @@ class ProductCard extends ConsumerWidget {
                     ],
                     const Spacer(),
                     _PriceRow(product: product),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.xs),
                     _CartButton(
                       product: product,
                       shopId: shopId,

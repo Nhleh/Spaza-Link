@@ -49,16 +49,26 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (i) => navigationShell.goBranch(
-          i,
-          initialLocation: i == navigationShell.currentIndex,
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 64,
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+          ),
+          iconTheme: WidgetStateProperty.all(
+            const IconThemeData(size: 22),
+          ),
         ),
-        backgroundColor: AppColors.lightSurface,
-        indicatorColor: AppColors.brandGreenSurface,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: List.generate(_tabs.length, (i) {
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (i) => navigationShell.goBranch(
+            i,
+            initialLocation: i == navigationShell.currentIndex,
+          ),
+          backgroundColor: AppColors.lightSurface,
+          indicatorColor: AppColors.brandGreenSurface,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: List.generate(_tabs.length, (i) {
           final tab = _tabs[i];
           final isActive = navigationShell.currentIndex == i;
 
@@ -91,6 +101,7 @@ class MainShell extends ConsumerWidget {
             label: tab.label,
           );
         }),
+        ),
       ),
     );
   }

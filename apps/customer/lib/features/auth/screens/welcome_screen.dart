@@ -69,14 +69,13 @@ class WelcomeScreen extends StatelessWidget {
 
               SpazaButton(
                 label: 'Login',
-                // push (not go) so the phone's back button returns here.
-                onPressed: () => context.push(RouteConstants.login),
+                onPressed: () => context.go(RouteConstants.login),
                 variant: SpazaButtonVariant.primary,
               ),
               const SizedBox(height: AppSpacing.md),
               SpazaButton(
                 label: 'Register',
-                onPressed: () => context.push(RouteConstants.register),
+                onPressed: () => context.go(RouteConstants.register),
                 variant: SpazaButtonVariant.outline,
               ),
 

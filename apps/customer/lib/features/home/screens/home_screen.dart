@@ -123,13 +123,9 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       foregroundColor: AppColors.white,
       elevation: 0,
       toolbarHeight: 72,
-      titleSpacing: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: AppSpacing.lg,
       // Greeting lives in the green header (reference screen 4).
-      leading: IconButton(
-        icon: const Icon(Icons.menu_rounded),
-        tooltip: 'Menu',
-        onPressed: () => context.go(RouteConstants.profile),
-      ),
       title: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,7 +526,7 @@ class _CategoryGrid extends ConsumerWidget {
             crossAxisCount: 4,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.lg,
-            childAspectRatio: 0.80,
+            childAspectRatio: 0.88,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => _CategoryTile(category: visible[i]),
@@ -576,6 +572,7 @@ class _CategoryTile extends StatelessWidget {
       onTap: () => context.push(
         RouteConstants.catalogueCategory
             .replaceFirst(':categoryId', category.id),
+        extra: category,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -698,7 +695,7 @@ class _FeaturedProductsGrid extends ConsumerWidget {
             crossAxisCount: 3,
             crossAxisSpacing: AppSpacing.sm,
             mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 0.54,
+            childAspectRatio: 0.52,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => ProductCard(product: visible[i]),

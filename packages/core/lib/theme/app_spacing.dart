@@ -69,7 +69,7 @@ abstract final class AppSpacing {
 
   // ── Product card ───────────────────────────────────────────────────────────
 
-  static const double productCardImageHeight = 120.0;
+  static const double productCardImageHeight = 96.0;
   static const double productCardRadius      = 14.0;
 
   // ── Avatar ─────────────────────────────────────────────────────────────────
