@@ -53,15 +53,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Failed — inspect the error to decide messaging / navigation.
     final err = ref.read(authActionProvider).error;
     if (err is AppException && err.code == 'account-not-found') {
-      context.showErrorSnack('No account found. Please register first.');
+      context.showErrorSnack('Your account does not exist. Please register.');
       context.go(RouteConstants.register);
     } else if (err is AppException && err.code == 'invalid-credentials') {
-      // Supabase can't distinguish a wrong password from a missing account, so
-      // point the user at Register in case they've never signed up here.
-      context.showErrorSnack(
-        'Incorrect details, or you haven\'t registered yet. '
-        'Tap "Register your shop" to create an account.',
-      );
+      context.showErrorSnack('Incorrect password. Please try again.');
     } else if (err is AppException) {
       context.showErrorSnack(err.message);
     } else {
@@ -92,7 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text('Welcome back', style: AppTypography.headlineMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Sign in with your email or cellphone number.',
+                  'Enter your details to continue.',
                   style: AppTypography.bodyMedium.copyWith(
                     color: AppColors.lightOnSurfaceVariant,
                   ),
@@ -100,11 +95,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: AppSpacing.x3l),
 
-                // Single field — accepts either email or cellphone.
+                // Single field — auto-detects email vs cellphone; no hint text.
                 SpazaTextField(
                   controller: _identifierController,
-                  label: 'Email or cellphone number',
-                  hint: 'you@example.com  or  082 123 4567',
                   prefixIcon: Icons.person_rounded,
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateIdentifier,

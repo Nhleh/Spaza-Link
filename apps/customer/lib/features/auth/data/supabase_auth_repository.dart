@@ -120,7 +120,26 @@ class SupabaseAuthRepository implements AuthRepository {
             updatedAt: DateTime.now(),
           ));
     } on supa.AuthException catch (e) {
-      throw _mapAuthError(e);
+      final mapped = _mapAuthError(e);
+      // Supabase returns the same "invalid credentials" for a missing account
+      // and a wrong password. Ask the DB whether the account exists so we can
+      // show the right message.
+      if (mapped is AuthException && mapped.code == 'invalid-credentials') {
+        if (!await _emailExists(email.trim())) {
+          throw AuthException.accountNotFound();
+        }
+      }
+      throw mapped;
+    }
+  }
+
+  /// True if an auth account exists for [email] (via the email_exists RPC).
+  Future<bool> _emailExists(String email) async {
+    try {
+      final r = await _sb.rpc('email_exists', params: {'p_email': email});
+      return r == true;
+    } catch (_) {
+      return true; // fail-safe: never wrongly claim "no account"
     }
   }
 

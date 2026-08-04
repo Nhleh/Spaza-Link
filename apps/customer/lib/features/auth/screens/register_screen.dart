@@ -265,32 +265,8 @@ class _StepOne extends StatelessWidget {
               validator: Validators.password,
               textInputAction: TextInputAction.done,
             ),
-
-            const SizedBox(height: AppSpacing.xl),
-
-            Text(
-              'Sign in using',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.lightOnSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(
-                  value: true,
-                  label: Text('Email'),
-                  icon: Icon(Icons.email_rounded),
-                ),
-                ButtonSegment(
-                  value: false,
-                  label: Text('Cellphone'),
-                  icon: Icon(Icons.phone_android_rounded),
-                ),
-              ],
-              selected: {useEmail},
-              onSelectionChanged: (s) => onLoginMethodChanged(s.first),
-            ),
+            // You can sign in later with EITHER your email or cellphone — the
+            // login screen auto-detects, so there's no method to choose here.
           ],
         ),
       ),
