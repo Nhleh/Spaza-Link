@@ -90,24 +90,32 @@ class ProductCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      product.name,
-                      style: AppTypography.labelMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.lightOnSurface,
+                    // Fixed 2-line name area — keeps every card the same height.
+                    SizedBox(
+                      height: 32,
+                      child: Text(
+                        product.name,
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.lightOnSurface,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (product.packSize.isNotEmpty) ...[
-                      const SizedBox(height: 1),
-                      Text(
+                    // Fixed 1-line pack-size area (always reserved).
+                    SizedBox(
+                      height: 14,
+                      child: Text(
                         product.packSize,
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.lightOnSurfaceVariant,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
+                    ),
                     const Spacer(),
                     _PriceRow(product: product),
                     const SizedBox(height: AppSpacing.xs),

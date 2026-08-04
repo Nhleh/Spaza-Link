@@ -545,7 +545,7 @@ class _CategoryGrid extends ConsumerWidget {
         crossAxisCount: 4,
         crossAxisSpacing: AppSpacing.md,
         mainAxisSpacing: AppSpacing.lg,
-        childAspectRatio: 0.80,
+        mainAxisExtent: 82,
       ),
       itemCount: 8,
       itemBuilder: (_, __) => Shimmer.fromColors(
@@ -694,7 +694,7 @@ class _FeaturedProductsGrid extends ConsumerWidget {
             crossAxisCount: 3,
             crossAxisSpacing: AppSpacing.sm,
             mainAxisSpacing: AppSpacing.md,
-            mainAxisExtent: 214,
+            mainAxisExtent: 238,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => ProductCard(product: visible[i]),
@@ -712,7 +712,7 @@ class _FeaturedProductsGrid extends ConsumerWidget {
         crossAxisCount: 3,
         crossAxisSpacing: AppSpacing.sm,
         mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.54,
+        mainAxisExtent: 238,
       ),
       itemCount: 6,
       itemBuilder: (_, __) => Shimmer.fromColors(
