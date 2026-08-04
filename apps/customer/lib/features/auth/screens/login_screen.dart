@@ -47,7 +47,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           isEmail: isEmail,
         );
 
-    if (!mounted || ok) return;
+    if (!mounted) return;
+    if (ok) {
+      // Go straight to the dashboard; the router redirect refines this to the
+      // register/pending screens only if the shop isn't set up yet.
+      context.go(RouteConstants.home);
+      return;
+    }
 
     final err = ref.read(authActionProvider).error;
     if (err is AppException && err.code == 'account-not-found') {

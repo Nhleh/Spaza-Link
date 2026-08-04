@@ -219,32 +219,18 @@ class _PriceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (product.isOnSale) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            CurrencyFormatter.format(product.salePriceCents!),
-            style: AppTypography.titleSmall.copyWith(
-              color: AppColors.brandGreenPrimary,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            CurrencyFormatter.format(product.priceCents),
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.lightOnSurfaceVariant,
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
-        ],
-      );
-    }
+    final onSale = product.isOnSale;
+    // Single line so every card is the same height; the -X% badge on the image
+    // already signals the discount.
     return Text(
-      CurrencyFormatter.format(product.priceCents),
+      CurrencyFormatter.format(
+          onSale ? product.salePriceCents! : product.priceCents),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: AppTypography.titleSmall.copyWith(
-        color: AppColors.lightOnSurface,
-        fontWeight: FontWeight.w700,
+        color:
+            onSale ? AppColors.brandGreenPrimary : AppColors.lightOnSurface,
+        fontWeight: FontWeight.w800,
       ),
     );
   }

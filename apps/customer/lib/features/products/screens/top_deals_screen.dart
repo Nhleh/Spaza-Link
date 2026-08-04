@@ -47,10 +47,10 @@ class TopDealsScreen extends ConsumerWidget {
             return GridView.builder(
               padding: const EdgeInsets.all(AppSpacing.screenPaddingH),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: AppSpacing.md,
+                crossAxisCount: 3,
+                crossAxisSpacing: AppSpacing.sm,
                 mainAxisSpacing: AppSpacing.md,
-                childAspectRatio: 0.62,
+                mainAxisExtent: 214,
               ),
               itemCount: products.length,
               itemBuilder: (_, i) => ProductCard(product: products[i]),

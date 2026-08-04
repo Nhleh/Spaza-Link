@@ -526,7 +526,7 @@ class _CategoryGrid extends ConsumerWidget {
             crossAxisCount: 4,
             crossAxisSpacing: AppSpacing.md,
             mainAxisSpacing: AppSpacing.lg,
-            childAspectRatio: 0.88,
+            mainAxisExtent: 82,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => _CategoryTile(category: visible[i]),
@@ -577,31 +577,30 @@ class _CategoryTile extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.brandGreenSurface,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                border: Border.all(color: AppColors.lightOutlineVariant),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: category.iconUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: category.iconUrl,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Icon(
-                        Icons.category_rounded,
-                        color: AppColors.brandGreenPrimary,
-                        size: 26,
-                      ),
-                    )
-                  : const Icon(
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: AppColors.brandGreenSurface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(color: AppColors.lightOutlineVariant),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: category.iconUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: category.iconUrl,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const Icon(
                       Icons.category_rounded,
                       color: AppColors.brandGreenPrimary,
-                      size: 26,
+                      size: 22,
                     ),
-            ),
+                  )
+                : const Icon(
+                    Icons.category_rounded,
+                    color: AppColors.brandGreenPrimary,
+                    size: 22,
+                  ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -695,7 +694,7 @@ class _FeaturedProductsGrid extends ConsumerWidget {
             crossAxisCount: 3,
             crossAxisSpacing: AppSpacing.sm,
             mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 0.52,
+            mainAxisExtent: 214,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => ProductCard(product: visible[i]),
