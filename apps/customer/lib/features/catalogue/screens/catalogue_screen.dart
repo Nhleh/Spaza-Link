@@ -431,7 +431,7 @@ class _PriceLabel extends StatelessWidget {
           Text(
             CurrencyFormatter.format(product.salePriceCents!),
             style: AppTypography.titleSmall.copyWith(
-              color: AppColors.brandGreenPrimary,
+              color: AppColors.lightOnSurface,
               fontWeight: FontWeight.w800,
             ),
           ),

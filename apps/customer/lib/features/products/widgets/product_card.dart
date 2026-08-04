@@ -236,8 +236,8 @@ class _PriceRow extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: AppTypography.titleSmall.copyWith(
-        color:
-            onSale ? AppColors.brandGreenPrimary : AppColors.lightOnSurface,
+        // All prices in black (the -X% badge already signals a sale).
+        color: AppColors.lightOnSurface,
         fontWeight: FontWeight.w800,
       ),
     );
