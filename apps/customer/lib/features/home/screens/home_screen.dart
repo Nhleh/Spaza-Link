@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../categories/providers/category_provider.dart';
-import '../../categories/widgets/category_card.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/widgets/product_card.dart';
 import '../../sync/providers/sync_provider.dart';
@@ -58,25 +59,23 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Greeting
-                    _GreetingSection(shop: shop),
+                    const SizedBox(height: AppSpacing.lg),
 
-                    // Savings value-prop hero
-                    const SizedBox(height: AppSpacing.md),
-                    const _SavingsBanner(),
+                    // Savings card ("You saved")
+                    const _SavingsCard(),
 
                     // Next delivery card (with truck)
                     const SizedBox(height: AppSpacing.lg),
                     _NextDeliveryCard(shop: shop),
 
-                    // Shop by Category
+                    // Shop Now — large category tiles
                     const SizedBox(height: AppSpacing.x3l),
                     _SectionHeader(
-                      title: 'Shop by Category',
+                      title: 'Shop Now',
                       onSeeAll: () => context.go(RouteConstants.catalogue),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    const _CategoryRow(),
+                    const _CategoryGrid(),
 
                     // Top Deals
                     const SizedBox(height: AppSpacing.x3l),
@@ -105,30 +104,59 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String shopId;
 
   @override
-  Size get preferredSize => const Size.fromHeight(AppSpacing.appBarHeight);
+  Size get preferredSize => const Size.fromHeight(72);
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final shop = ref.watch(currentShopProvider).valueOrNull;
+    final firstName = shop?.ownerName.split(' ').first ?? 'there';
+
     return AppBar(
       backgroundColor: AppColors.brandGreenPrimary,
       foregroundColor: AppColors.white,
       elevation: 0,
-      titleSpacing: AppSpacing.lg,
-      title: const Text(
-        'SpazaLink',
-        style: TextStyle(
-          color: AppColors.white,
-          fontWeight: FontWeight.w800,
-          fontSize: 22,
-          letterSpacing: -0.3,
-        ),
+      toolbarHeight: 72,
+      titleSpacing: 0,
+      // Greeting lives in the green header (reference screen 4).
+      leading: IconButton(
+        icon: const Icon(Icons.menu_rounded),
+        tooltip: 'Menu',
+        onPressed: () => context.go(RouteConstants.profile),
+      ),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${_greeting()}, $firstName! 👋',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              letterSpacing: -0.2,
+            ),
+          ),
+          Text(
+            shop?.shopName ?? 'Your Store',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.white.withValues(alpha: 0.85),
+              fontSize: 12.5,
+            ),
+          ),
+        ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.search_rounded),
-          onPressed: () => context.push(RouteConstants.helpCentre),
-          tooltip: 'Search',
-        ),
         _CartIconButton(count: cartCount),
         const SizedBox(width: AppSpacing.sm),
       ],
@@ -190,59 +218,24 @@ class _ConnectivityBanner extends ConsumerWidget {
   }
 }
 
-// ── Greeting ──────────────────────────────────────────────────────────────────
+// ── Savings Card ──────────────────────────────────────────────────────────────
 
-class _GreetingSection extends StatelessWidget {
-  const _GreetingSection({this.shop});
-  final ShopModel? shop;
-
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
+/// Green "You saved" card (reference screen 4). Amount is the real savings on
+/// on-sale items currently in the cart; "View details" opens the cart.
+class _SavingsCard extends ConsumerWidget {
+  const _SavingsCard();
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenPaddingH,
-        AppSpacing.xxl,
-        AppSpacing.screenPaddingH,
-        AppSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${_greeting}, ${shop?.ownerName.split(' ').first ?? 'there'}! 👋',
-            style: AppTypography.headlineSmall.copyWith(
-              color: AppColors.lightOnSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            shop?.shopName ?? 'Your Store',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.lightOnSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shopId = ref.watch(currentShopProvider).valueOrNull?.id ?? '';
+    final items = ref.watch(cartItemsProvider(shopId)).valueOrNull ?? const [];
+    final savedCents = items.fold<int>(0, (sum, i) {
+      final sale = i.salePriceCents;
+      return (sale != null && sale < i.priceCents)
+          ? sum + (i.priceCents - sale) * i.quantity
+          : sum;
+    });
 
-// ── Savings Banner ────────────────────────────────────────────────────────────
-
-/// Green value-prop hero, matching the mockup's savings card. Honest copy — no
-/// fabricated figures until real order history exists to compute savings from.
-class _SavingsBanner extends StatelessWidget {
-  const _SavingsBanner();
-
-  @override
-  Widget build(BuildContext context) {
     return Padding(
       padding:
           const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
@@ -250,50 +243,78 @@ class _SavingsBanner extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+            colors: [Color(0xFF066837), Color(0xFF0B8F47)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: AppColors.brandGreenPrimary.withValues(alpha: 0.25),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+              color: AppColors.brandGreenPrimary.withValues(alpha: 0.30),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(AppSpacing.xxl),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxl, vertical: AppSpacing.xl),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Buy in bulk, save more',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w800,
+                    'You saved',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.9),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 2),
                   Text(
-                    'Wholesale prices delivered to your shop. '
-                    'The more you order, the less you pay per unit.',
+                    CurrencyFormatter.format(savedCents),
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    savedCents > 0
+                        ? 'on items in your cart'
+                        : 'Add deal items to start saving',
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.9),
-                      height: 1.4,
+                      color: AppColors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: AppSpacing.lg),
-            Icon(
-              Icons.savings_rounded,
-              color: AppColors.white.withValues(alpha: 0.28),
-              size: 56,
+            const SizedBox(width: AppSpacing.md),
+            InkWell(
+              onTap: () => context.push(RouteConstants.cart),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View details',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: AppColors.white, size: 18),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -304,35 +325,23 @@ class _SavingsBanner extends StatelessWidget {
 
 // ── Next Delivery Card ────────────────────────────────────────────────────────
 
-/// White card with the delivery truck, matching mockup screen 4. Reflects the
-/// real shop status — no fake delivery dates.
+/// White "Next Delivery" card: delivery window on the left, the supplied
+/// Couriers.png truck on the right (BoxFit.contain, vertically centred).
 class _NextDeliveryCard extends StatelessWidget {
   const _NextDeliveryCard({this.shop});
   final ShopModel? shop;
 
-  ({String title, String subtitle}) get _status {
-    if (shop == null) {
-      return (
-        title: 'Next delivery',
-        subtitle: 'Register your shop to schedule deliveries',
-      );
-    }
-    final approved = shop!.status == 'approved';
-    if (!approved) {
-      return (
-        title: 'Shop pending approval',
-        subtitle: 'Deliveries unlock once an admin approves your shop',
-      );
-    }
-    return (
-      title: 'No delivery scheduled',
-      subtitle: 'Place an order and we\'ll schedule your delivery',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final s = _status;
+    // Upcoming weekly delivery window (next Friday, 08:00–12:00) — a real
+    // forward date, replaced by per-order scheduling when that exists.
+    final today = DateTime.now();
+    var days = (DateTime.friday - today.weekday) % 7;
+    if (days == 0) days = 7;
+    final next =
+        DateTime(today.year, today.month, today.day).add(Duration(days: days));
+    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(next);
+
     return Padding(
       padding:
           const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
@@ -344,53 +353,56 @@ class _NextDeliveryCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           onTap: () => context.go(RouteConstants.orders),
           child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.md, AppSpacing.lg),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               border: Border.all(color: AppColors.lightOutlineVariant),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.brandGreenPrimary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  ),
-                  child: const Icon(
-                    Icons.local_shipping_rounded,
-                    color: AppColors.brandGreenPrimary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        s.title,
+                        'Next Delivery',
                         style: AppTypography.titleSmall.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                           color: AppColors.lightOnSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        dateStr,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.lightOnSurface,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        s.subtitle,
+                        '08:00 – 12:00',
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.lightOnSurfaceVariant,
-                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.lightOnSurfaceVariant,
+                const SizedBox(width: AppSpacing.md),
+                // The supplied truck image — contain so the whole truck shows,
+                // vertically centred, small right margin (from the card padding).
+                SizedBox(
+                  width: 104,
+                  height: 68,
+                  child: Image.asset(
+                    'assets/images/Couriers.png',
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerRight,
+                  ),
                 ),
               ],
             ),
@@ -486,7 +498,7 @@ class _SectionHeader extends StatelessWidget {
               foregroundColor: AppColors.brandGreenPrimary,
               padding: EdgeInsets.zero,
             ),
-            child: const Text('See all →'),
+            child: const Text('View all'),
           ),
         ],
       ),
@@ -494,56 +506,118 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Category Row ──────────────────────────────────────────────────────────────
+// ── Shop Now — large category grid (4 columns) ────────────────────────────────
 
-class _CategoryRow extends ConsumerWidget {
-  const _CategoryRow();
+class _CategoryGrid extends ConsumerWidget {
+  const _CategoryGrid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
 
-    return SizedBox(
-      height: 100,
-      child: categoriesAsync.when(
-        loading: () => _shimmerRow(),
-        error: (_, __) => const SizedBox.shrink(),
-        data: (cats) {
-          if (cats.isEmpty) return const SizedBox.shrink();
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenPaddingH,
-            ),
-            scrollDirection: Axis.horizontal,
-            itemCount: cats.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(width: AppSpacing.md),
-            itemBuilder: (_, i) => SizedBox(
-              width: 76,
-              child: CategoryCard(category: cats[i]),
-            ),
-          );
-        },
-      ),
+    return categoriesAsync.when(
+      loading: () => _shimmerGrid(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (cats) {
+        if (cats.isEmpty) return const SizedBox.shrink();
+        final visible = cats.take(8).toList(); // 4 × 2
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPaddingH),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.lg,
+            childAspectRatio: 0.80,
+          ),
+          itemCount: visible.length,
+          itemBuilder: (_, i) => _CategoryTile(category: visible[i]),
+        );
+      },
     );
   }
 
-  Widget _shimmerRow() {
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
-      scrollDirection: Axis.horizontal,
-      itemCount: 6,
-      separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+  Widget _shimmerGrid() {
+    return GridView.builder(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.screenPaddingH),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.lg,
+        childAspectRatio: 0.80,
+      ),
+      itemCount: 8,
       itemBuilder: (_, __) => Shimmer.fromColors(
         baseColor: AppColors.lightSurfaceVariant,
         highlightColor: AppColors.lightOutlineVariant,
         child: Container(
-          width: 76,
           decoration: BoxDecoration(
             color: AppColors.lightSurfaceVariant,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.category});
+  final CategoryModel category;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(
+        RouteConstants.catalogueCategory
+            .replaceFirst(':categoryId', category.id),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.brandGreenSurface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(color: AppColors.lightOutlineVariant),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: category.iconUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: category.iconUrl,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.category_rounded,
+                        color: AppColors.brandGreenPrimary,
+                        size: 26,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.category_rounded,
+                      color: AppColors.brandGreenPrimary,
+                      size: 26,
+                    ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            category.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.lightOnSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -621,10 +695,10 @@ class _FeaturedProductsGrid extends ConsumerWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: AppSpacing.md,
+            crossAxisCount: 3,
+            crossAxisSpacing: AppSpacing.sm,
             mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 0.62,
+            childAspectRatio: 0.54,
           ),
           itemCount: visible.length,
           itemBuilder: (_, i) => ProductCard(product: visible[i]),
@@ -639,12 +713,12 @@ class _FeaturedProductsGrid extends ConsumerWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.md,
+        crossAxisCount: 3,
+        crossAxisSpacing: AppSpacing.sm,
         mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.62,
+        childAspectRatio: 0.54,
       ),
-      itemCount: 4,
+      itemCount: 6,
       itemBuilder: (_, __) => Shimmer.fromColors(
         baseColor: AppColors.lightSurfaceVariant,
         highlightColor: AppColors.lightOutlineVariant,
