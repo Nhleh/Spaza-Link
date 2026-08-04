@@ -46,7 +46,8 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(notifier.dispose);
 
   return GoRouter(
-    initialLocation: RouteConstants.splash,
+    // Always open on the Welcome screen (logo + Login/Register).
+    initialLocation: RouteConstants.welcome,
     debugLogDiagnostics: AppConfig.instance.isDevelopment,
     refreshListenable: notifier,
     redirect: _buildRedirect(ref),
@@ -349,6 +350,11 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
 String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
   return (context, state) {
     final loc = state.matchedLocation;
+
+    // Welcome (logo + Login/Register) is the persistent landing screen — the app
+    // always opens here and stays until the user taps a button. Never auto-
+    // redirect away from it, regardless of sign-in state.
+    if (loc == RouteConstants.welcome) return null;
 
     final authAsync = ref.read(authUidProvider);
     if (authAsync.isLoading) return null;

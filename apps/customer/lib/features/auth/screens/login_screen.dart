@@ -70,7 +70,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(onPressed: () => context.go(RouteConstants.welcome)),
+        leading: BackButton(
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(RouteConstants.welcome),
+        ),
         title: const Text('Login'),
         elevation: 0,
       ),

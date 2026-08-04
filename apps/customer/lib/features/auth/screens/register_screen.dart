@@ -119,7 +119,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         leading: _currentPage > 0
             ? BackButton(onPressed: _prevPage)
-            : BackButton(onPressed: () => context.go(RouteConstants.welcome)),
+            : BackButton(
+                onPressed: () => context.canPop()
+                    ? context.pop()
+                    : context.go(RouteConstants.welcome),
+              ),
         title: const Text('Register Your Shop'),
         elevation: 0,
         bottom: PreferredSize(
