@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/supabase_auth_repository.dart';
 
@@ -82,6 +85,8 @@ class AuthActionNotifier extends Notifier<AsyncValue<void>> {
     required String physicalAddress,
     required String city,
     required String province,
+    Uint8List? shopPhotoBytes,
+    String shopPhotoExt = 'jpg',
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -92,6 +97,25 @@ class AuthActionNotifier extends Notifier<AsyncValue<void>> {
         password: password,
         useEmailLogin: useEmailLogin,
       );
+
+      // Upload the shop photo now that we have an authenticated session (the
+      // shop_photos bucket requires auth). Optional — ignore upload failures.
+      String? photoUrl;
+      if (shopPhotoBytes != null) {
+        try {
+          final path =
+              'shop_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.$shopPhotoExt';
+          final storage = Supabase.instance.client.storage.from('shop_photos');
+          await storage.uploadBinary(
+            path,
+            shopPhotoBytes,
+            fileOptions: FileOptions(
+                contentType: 'image/$shopPhotoExt', upsert: true),
+          );
+          photoUrl = storage.getPublicUrl(path);
+        } catch (_) {/* photo is optional */}
+      }
+
       // Don't create a duplicate shop if this account already registered one.
       final existingShop = await _repo.getShopByOwnerId(user.uid);
       if (existingShop == null) {
@@ -102,6 +126,7 @@ class AuthActionNotifier extends Notifier<AsyncValue<void>> {
           physicalAddress: physicalAddress,
           city: city,
           province: province,
+          shopPhotoUrl: photoUrl,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ));

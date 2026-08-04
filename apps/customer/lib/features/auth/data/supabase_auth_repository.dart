@@ -281,6 +281,7 @@ class SupabaseAuthRepository implements AuthRepository {
         'province': s.province,
         'gps_lat': s.gpsLocation?.latitude,
         'gps_lng': s.gpsLocation?.longitude,
+        'shop_photo_url': s.shopPhotoUrl,
         'status': AppConstants.shopStatusPending,
       };
 
