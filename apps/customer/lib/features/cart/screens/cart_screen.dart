@@ -213,7 +213,7 @@ class _CartItemTile extends ConsumerWidget {
                       Text(
                         CurrencyFormatter.format(item.lineTotalCents),
                         style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.brandGreenPrimary,
+                          color: AppColors.lightOnSurface,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

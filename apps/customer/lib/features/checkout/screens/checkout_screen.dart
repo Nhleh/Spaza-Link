@@ -311,7 +311,7 @@ class _OrderSummaryCard extends StatelessWidget {
                 CurrencyFormatter.format(total),
                 style: AppTypography.titleSmall.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: AppColors.brandGreenPrimary,
+                  color: AppColors.lightOnSurface,
                 ),
               ),
             ],

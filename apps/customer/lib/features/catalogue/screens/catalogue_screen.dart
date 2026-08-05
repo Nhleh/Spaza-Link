@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../categories/providers/category_provider.dart';
 import '../../products/providers/product_provider.dart';
+import '../../products/widgets/product_card.dart';
 
 class CatalogueScreen extends ConsumerStatefulWidget {
   const CatalogueScreen({super.key});
@@ -284,294 +284,25 @@ class _ProductList extends ConsumerWidget {
                 : 'No products in this category yet.',
           );
         }
-        return ListView.separated(
+        // Uses the same ProductCard + GridView that Top Deals renders reliably
+        // (bounded cell height via mainAxisExtent).
+        return GridView.builder(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.screenPaddingH,
             AppSpacing.md,
             AppSpacing.screenPaddingH,
             AppSpacing.x4l,
           ),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            mainAxisExtent: 258,
+          ),
           itemCount: products.length,
-          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-          itemBuilder: (_, i) =>
-              _ProductRow(product: products[i], shopId: shopId),
+          itemBuilder: (_, i) => ProductCard(product: products[i]),
         );
       },
-    );
-  }
-}
-
-// ── Product row ───────────────────────────────────────────────────────────────
-
-class _ProductRow extends ConsumerWidget {
-  const _ProductRow({required this.product, required this.shopId});
-
-  final ProductModel product;
-  final String shopId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(cartItemsProvider(shopId)).valueOrNull ?? [];
-    final cartItem = items.where((i) => i.productId == product.id).firstOrNull;
-
-    return GestureDetector(
-      onTap: () => context.push(
-        RouteConstants.productDetail.replaceFirst(':productId', product.id),
-        extra: product,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.lightOutlineVariant),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _Thumb(imageUrl: product.primaryImageUrl),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.lightOnSurface,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (product.packSize.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      product.packSize,
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.lightOnSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.xs),
-                  _PriceLabel(product: product),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            _AddControl(
-              product: product,
-              shopId: shopId,
-              cartItem: cartItem,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({this.imageUrl});
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    const size = 64.0;
-    Widget fallback() => Container(
-          width: size,
-          height: size,
-          color: AppColors.brandGreenSurfaceLight,
-          child: const Icon(
-            Icons.inventory_2_outlined,
-            color: AppColors.brandGreenPrimary,
-            size: 26,
-          ),
-        );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      child: (imageUrl == null || imageUrl!.isEmpty)
-          ? fallback()
-          : Container(
-              width: size,
-              height: size,
-              color: AppColors.white,
-              child: CachedNetworkImage(
-                imageUrl: imageUrl!,
-                width: size,
-                height: size,
-                // Contain shows the whole product image, uncropped.
-                fit: BoxFit.contain,
-                placeholder: (_, __) => Shimmer.fromColors(
-                  baseColor: AppColors.lightSurfaceVariant,
-                  highlightColor: AppColors.lightOutlineVariant,
-                  child: Container(
-                      width: size,
-                      height: size,
-                      color: AppColors.lightSurfaceVariant),
-                ),
-                errorWidget: (_, __, ___) => fallback(),
-              ),
-            ),
-    );
-  }
-}
-
-class _PriceLabel extends StatelessWidget {
-  const _PriceLabel({required this.product});
-  final ProductModel product;
-
-  @override
-  Widget build(BuildContext context) {
-    if (product.isOnSale) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            CurrencyFormatter.format(product.salePriceCents!),
-            style: AppTypography.titleSmall.copyWith(
-              color: AppColors.lightOnSurface,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            CurrencyFormatter.format(product.priceCents),
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.lightOnSurfaceVariant,
-              decoration: TextDecoration.lineThrough,
-            ),
-          ),
-        ],
-      );
-    }
-    return Text(
-      CurrencyFormatter.format(product.priceCents),
-      style: AppTypography.titleSmall.copyWith(
-        color: AppColors.lightOnSurface,
-        fontWeight: FontWeight.w800,
-      ),
-    );
-  }
-}
-
-class _AddControl extends ConsumerWidget {
-  const _AddControl({
-    required this.product,
-    required this.shopId,
-    required this.cartItem,
-  });
-
-  final ProductModel product;
-  final String shopId;
-  final CartItemModel? cartItem;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!product.isAvailable) {
-      return Text(
-        'Out of\nstock',
-        textAlign: TextAlign.center,
-        style: AppTypography.labelSmall.copyWith(color: AppColors.error),
-      );
-    }
-
-    if (cartItem == null) {
-      return SizedBox(
-        height: 34,
-        child: ElevatedButton(
-          onPressed: () => _add(ref),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.brandGreenPrimary,
-            foregroundColor: AppColors.white,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            ),
-            elevation: 0,
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.add_rounded, size: 16),
-              SizedBox(width: 2),
-              Text('Add', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _QtyBtn(
-          icon: Icons.remove_rounded,
-          onTap: () => ref.read(cartNotifierProvider.notifier).updateQuantity(
-                productId: product.id,
-                shopId: shopId,
-                quantity: cartItem!.quantity - 1,
-              ),
-        ),
-        SizedBox(
-          width: 28,
-          child: Text(
-            '${cartItem!.quantity}',
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.brandGreenPrimary,
-            ),
-          ),
-        ),
-        _QtyBtn(
-          icon: Icons.add_rounded,
-          onTap: () => ref.read(cartNotifierProvider.notifier).updateQuantity(
-                productId: product.id,
-                shopId: shopId,
-                quantity: cartItem!.quantity + 1,
-              ),
-        ),
-      ],
-    );
-  }
-
-  void _add(WidgetRef ref) {
-    ref.read(cartNotifierProvider.notifier).addItem(
-          CartItemModel(
-            productId: product.id,
-            shopId: shopId,
-            productName: product.name,
-            imageUrl: product.primaryImageUrl,
-            priceCents: product.priceCents,
-            salePriceCents: product.salePriceCents,
-            packSize: product.packSize,
-            quantity: 1,
-            addedAt: DateTime.now(),
-          ),
-        );
-  }
-}
-
-class _QtyBtn extends StatelessWidget {
-  const _QtyBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: AppColors.brandGreenSurface,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-        child: Icon(icon, size: 18, color: AppColors.brandGreenPrimary),
-      ),
     );
   }
 }
