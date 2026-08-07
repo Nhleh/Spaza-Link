@@ -50,19 +50,25 @@ class _AdCarousel extends StatefulWidget {
 }
 
 class _AdCarouselState extends State<_AdCarousel> {
-  final _controller = PageController();
+  // Start from a high page so the carousel can keep advancing in a single
+  // (forward) direction indefinitely, looping seamlessly without ever jumping
+  // backwards.
+  static const int _base = 100000;
+  late final PageController _controller;
   Timer? _timer;
-  int _index = 0;
+  int _page = _base;
+
+  int get _activeIndex => _page % widget.ads.length;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _controller = PageController(initialPage: _base);
+    // Each ad stays on screen for 12 seconds, then always slides forward.
+    _timer = Timer.periodic(const Duration(seconds: 12), (_) {
       if (!mounted || !_controller.hasClients) return;
-      final next = (_index + 1) % widget.ads.length;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 450),
+      _controller.nextPage(
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
     });
@@ -77,13 +83,16 @@ class _AdCarouselState extends State<_AdCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final len = widget.ads.length;
     return Stack(
       children: [
         PageView.builder(
           controller: _controller,
-          itemCount: widget.ads.length,
-          onPageChanged: (i) => setState(() => _index = i),
-          itemBuilder: (_, i) => _AdCard(ad: widget.ads[i]),
+          // Infinite in the forward direction; index is mapped back onto the
+          // real ad list with a modulo.
+          itemCount: null,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) => _AdCard(ad: widget.ads[((i % len) + len) % len]),
         ),
         Positioned(
           bottom: 8,
@@ -92,15 +101,15 @@ class _AdCarouselState extends State<_AdCarousel> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (var i = 0; i < widget.ads.length; i++)
+              for (var i = 0; i < len; i++)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: i == _index ? 16 : 6,
+                  width: i == _activeIndex ? 16 : 6,
                   height: 6,
                   decoration: BoxDecoration(
                     color: AppColors.white
-                        .withValues(alpha: i == _index ? 0.95 : 0.6),
+                        .withValues(alpha: i == _activeIndex ? 0.95 : 0.6),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
