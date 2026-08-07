@@ -30,6 +30,7 @@ import '../../features/pools/screens/pool_detail_screen.dart';
 import '../../features/pools/screens/pools_list_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
 import '../../features/products/screens/top_deals_screen.dart';
+import '../../features/savings/screens/savings_report_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever auth or shop state changes.
@@ -306,6 +307,12 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
+        path: RouteConstants.savings,
+        name: 'savings',
+        builder: (context, state) => const SavingsReportScreen(),
+      ),
+
+      GoRoute(
         path: RouteConstants.settings,
         name: 'settings',
         builder: (context, state) =>
@@ -372,7 +379,9 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
     };
 
     if (uid == null) {
-      return authRoutes.contains(loc) ? null : RouteConstants.welcome;
+      // Not authenticated: auth screens (incl. Welcome) are allowed; any
+      // protected route sends the user to Login (spec #1).
+      return authRoutes.contains(loc) ? null : RouteConstants.login;
     }
 
     final shopAsync = ref.read(currentShopProvider);

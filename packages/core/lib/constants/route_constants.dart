@@ -30,6 +30,7 @@ abstract final class RouteConstants {
   static const String profile = '/profile';
   static const String profileEdit = '/profile/edit';
   static const String settings = '/settings';
+  static const String savings = '/savings';
   static const String support = '/support';
   static const String helpCentre = '/help';
 
@@ -53,6 +54,7 @@ abstract final class RouteConstants {
   static const String adminPromotions = '/admin/promotions';
   static const String adminBanners = '/admin/banners';
   static const String adminReports = '/admin/reports';
+  static const String adminAds = '/admin/ads';
   static const String adminSettings = '/admin/settings';
   static const String adminNotifications = '/admin/notifications';
 

@@ -12,6 +12,7 @@ import '../../features/orders/screens/admin_orders_screen.dart';
 import '../../features/products/screens/admin_product_form_screen.dart';
 import '../../features/products/screens/admin_products_screen.dart';
 import '../../features/messaging/screens/admin_communication_screen.dart';
+import '../../features/ads/screens/admin_ads_screen.dart';
 import '../../features/pools/screens/admin_pools_screen.dart';
 import '../../features/reports/screens/admin_reports_screen.dart';
 import '../../features/settings/screens/admin_settings_screen.dart';
@@ -226,6 +227,17 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 path: '/admin/pools',
                 name: 'admin-pools',
                 builder: (context, state) => const AdminPoolsScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 10 — Advertisements
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteConstants.adminAds,
+                name: 'admin-ads',
+                builder: (context, state) => const AdminAdsScreen(),
               ),
             ],
           ),

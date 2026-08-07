@@ -11,6 +11,7 @@ import 'package:spazalink_core/core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/security/inactivity_guard.dart';
 import 'firebase_options_dev.dart';
 import 'supabase_config.dart';
 import 'features/cart/data/hive_cart_repository.dart';
@@ -41,6 +42,10 @@ Future<void> main() async {
 
   final cartRepo = await _initHive();
   await _initFirebase();
+
+  // Security: drop a restored-but-stale session so reopening the app after a
+  // period of inactivity requires a fresh login (spec #1).
+  await enforceFreshSessionOnStartup();
 
   runApp(ProviderScope(
     overrides: [

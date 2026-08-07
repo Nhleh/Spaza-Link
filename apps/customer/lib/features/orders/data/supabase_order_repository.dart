@@ -16,6 +16,9 @@ class SupabaseOrderRepository implements OrderRepository {
 
   @override
   Future<OrderModel> placeOrder(OrderModel order) async {
+    // Delivery savings: a free-delivery order saved the standard delivery fee.
+    final deliverySaved =
+        order.deliveryFeeCents == 0 ? AppConstants.deliveryFeeCents : 0;
     final row = await _sb
         .from(_orders)
         .insert({
@@ -24,6 +27,9 @@ class SupabaseOrderRepository implements OrderRepository {
           'status': order.status,
           'total_cents': order.totalCents,
           'local_uuid': order.localUuid,
+          'discount_saved_cents': order.discountAmountCents,
+          'delivery_saved_cents': deliverySaved,
+          'pool_saved_cents': 0,
         })
         .select()
         .single();

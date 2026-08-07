@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../auth/providers/auth_provider.dart';
+import '../../savings/models/savings.dart';
+import '../../savings/providers/savings_provider.dart';
 
 /// Customer profile — matches the mockup: shop header with photo + address +
 /// Edit, then a list of settings rows, then Logout. The shop's approval status
@@ -77,6 +79,11 @@ class ProfileScreen extends ConsumerWidget {
                       context.push('${RouteConstants.profile}/notifications'),
                 ),
                 _RowData(
+                  icon: Icons.savings_outlined,
+                  label: 'Savings Summary',
+                  onTap: () => _showSavingsPeriodSheet(context, ref),
+                ),
+                _RowData(
                   icon: Icons.help_outline_rounded,
                   label: 'Help & Support',
                   onTap: () => context.push('${RouteConstants.profile}/support'),
@@ -112,6 +119,54 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
+
+/// Bottom sheet to pick which savings window the dashboard card shows
+/// (spec #4). The choice is persisted via [savingsPeriodProvider].
+Future<void> _showSavingsPeriodSheet(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusLg)),
+    ),
+    builder: (sheetContext) {
+      return Consumer(
+        builder: (context, ref, _) {
+          final current = ref.watch(savingsPeriodProvider);
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: AppSpacing.md),
+                Text('Savings summary',
+                    style: AppTypography.titleMedium
+                        .copyWith(fontWeight: FontWeight.w700)),
+                Text('Choose what your dashboard card shows',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.lightOnSurfaceVariant)),
+                const SizedBox(height: AppSpacing.sm),
+                for (final p in SavingsPeriod.values)
+                  RadioListTile<SavingsPeriod>(
+                    value: p,
+                    groupValue: current,
+                    activeColor: AppColors.brandGreenPrimary,
+                    title: Text('${p.label} savings'),
+                    onChanged: (v) {
+                      if (v != null) {
+                        ref.read(savingsPeriodProvider.notifier).set(v);
+                      }
+                      Navigator.of(sheetContext).pop();
+                    },
+                  ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({this.shop, this.user});

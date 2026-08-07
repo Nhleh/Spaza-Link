@@ -9,8 +9,11 @@ import 'package:spazalink_core/core.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../categories/providers/category_provider.dart';
+import '../../orders/providers/order_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/widgets/product_card.dart';
+import '../../savings/models/savings.dart';
+import '../../savings/providers/savings_provider.dart';
 import '../../sync/providers/sync_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -216,21 +219,21 @@ class _ConnectivityBanner extends ConsumerWidget {
 
 // ── Savings Card ──────────────────────────────────────────────────────────────
 
-/// Green "You saved" card (reference screen 4). Amount is the real savings on
-/// on-sale items currently in the cart; "View details" opens the cart.
+/// Green "You saved" card (reference screen 4). Shows the customer's real
+/// savings for the chosen window (weekly/monthly — set in Settings); tapping
+/// opens the detailed Savings Report.
 class _SavingsCard extends ConsumerWidget {
   const _SavingsCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shopId = ref.watch(currentShopProvider).valueOrNull?.id ?? '';
-    final items = ref.watch(cartItemsProvider(shopId)).valueOrNull ?? const [];
-    final savedCents = items.fold<int>(0, (sum, i) {
-      final sale = i.salePriceCents;
-      return (sale != null && sale < i.priceCents)
-          ? sum + (i.priceCents - sale) * i.quantity
-          : sum;
-    });
+    final period = ref.watch(savingsPeriodProvider);
+    final data = ref.watch(savingsDataProvider).valueOrNull;
+    final summary =
+        period == SavingsPeriod.weekly ? data?.weekly : data?.monthly;
+    final savedCents = summary?.totalCents ?? 0;
+    final periodWord =
+        period == SavingsPeriod.weekly ? 'this week' : 'this month';
 
     return Padding(
       padding:
@@ -263,7 +266,7 @@ class _SavingsCard extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'You saved',
+                    'You saved $periodWord',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.white.withValues(alpha: 0.9),
                     ),
@@ -280,8 +283,8 @@ class _SavingsCard extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     savedCents > 0
-                        ? 'on items in your cart'
-                        : 'Add deal items to start saving',
+                        ? 'Tap to see your full savings report'
+                        : 'Buy deals & pool to start saving',
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.white.withValues(alpha: 0.85),
                     ),
@@ -291,7 +294,7 @@ class _SavingsCard extends ConsumerWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             InkWell(
-              onTap: () => context.push(RouteConstants.cart),
+              onTap: () => context.push(RouteConstants.savings),
               borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -321,22 +324,31 @@ class _SavingsCard extends ConsumerWidget {
 
 // ── Next Delivery Card ────────────────────────────────────────────────────────
 
-/// White "Next Delivery" card: delivery window on the left, the supplied
-/// Couriers.png truck on the right (BoxFit.contain, vertically centred).
-class _NextDeliveryCard extends StatelessWidget {
+/// White "Next Delivery" card driven by the customer's real order status
+/// (spec #12–#14). A confirmed order shows its status, expected delivery
+/// (within 18h of confirmation) and remaining time; with no confirmed order on
+/// the way it shows "No Delivery". Completed/cancelled orders never appear.
+class _NextDeliveryCard extends ConsumerWidget {
   const _NextDeliveryCard({this.shop});
   final ShopModel? shop;
 
   @override
-  Widget build(BuildContext context) {
-    // Upcoming weekly delivery window (next Friday, 08:00–12:00) — a real
-    // forward date, replaced by per-order scheduling when that exists.
-    final today = DateTime.now();
-    var days = (DateTime.friday - today.weekday) % 7;
-    if (days == 0) days = 7;
-    final next =
-        DateTime(today.year, today.month, today.day).add(Duration(days: days));
-    final dateStr = DateFormat('EEEE, d MMMM yyyy').format(next);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shopId = shop?.id ?? '';
+    final order =
+        shopId.isEmpty ? null : ref.watch(nextDeliveryProvider(shopId));
+
+    final bool hasDelivery = order != null;
+    final eta = order == null ? null : deliveryEta(order);
+    final remaining = eta == null ? null : eta.difference(DateTime.now());
+
+    final String title = hasDelivery ? 'Next Delivery' : 'No Delivery';
+    final String primary = hasDelivery
+        ? DateFormat('EEEE, d MMMM').format(eta!)
+        : 'No orders on the way';
+    final String secondary = hasDelivery
+        ? _remainingLabel(order.status, remaining!)
+        : 'Your next delivery will appear here';
 
     return Padding(
       padding:
@@ -363,16 +375,24 @@ class _NextDeliveryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Next Delivery',
-                        style: AppTypography.titleSmall.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.lightOnSurface,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            title,
+                            style: AppTypography.titleSmall.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.lightOnSurface,
+                            ),
+                          ),
+                          if (hasDelivery) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            _StatusChip(status: order.status),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        dateStr,
+                        primary,
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.lightOnSurface,
                           fontWeight: FontWeight.w600,
@@ -380,7 +400,7 @@ class _NextDeliveryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '08:00 – 12:00',
+                        secondary,
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.lightOnSurfaceVariant,
                         ),
@@ -389,8 +409,6 @@ class _NextDeliveryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                // The supplied truck image — contain so the whole truck shows,
-                // vertically centred, small right margin (from the card padding).
                 SizedBox(
                   width: 104,
                   height: 68,
@@ -403,6 +421,38 @@ class _NextDeliveryCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  String _remainingLabel(String status, Duration remaining) {
+    if (status == OrderStatus.outForDelivery) return 'Out for delivery now';
+    if (remaining.isNegative) return 'Arriving any moment';
+    final h = remaining.inHours;
+    final m = remaining.inMinutes % 60;
+    if (h >= 1) return 'Arrives in about ${h}h ${m}m';
+    return 'Arrives in about ${remaining.inMinutes}m';
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      decoration: BoxDecoration(
+        color: status.orderStatusColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+      ),
+      child: Text(
+        status.orderStatusLabel,
+        style: AppTypography.labelSmall.copyWith(
+          color: status.orderStatusColor,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

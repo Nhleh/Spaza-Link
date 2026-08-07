@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 import 'core/router/app_router.dart';
+import 'core/security/inactivity_guard.dart';
 
 /// Root widget for the SpazaLink Customer Application.
 class CustomerApp extends ConsumerWidget {
@@ -19,6 +20,9 @@ class CustomerApp extends ConsumerWidget {
       darkTheme: AppTheme.light,
       themeMode: ThemeMode.light,
       routerConfig: router,
+      // Global inactivity auto-logout (spec #2) — wraps every routed page.
+      builder: (context, child) =>
+          InactivityGuard(child: child ?? const SizedBox.shrink()),
     );
   }
 }

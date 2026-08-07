@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:spazalink_core/core.dart';
 
+import '../../ads/widgets/ad_banner.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../categories/providers/category_provider.dart';
@@ -71,6 +72,9 @@ class _CatalogueScreenState extends ConsumerState<CatalogueScreen> {
             selectedId: _categoryId,
             onSelect: _selectCategory,
           ),
+
+          // Sliding advertisement banner (hidden when there are no active ads).
+          const AdBanner(),
 
           // Product list
           Expanded(
