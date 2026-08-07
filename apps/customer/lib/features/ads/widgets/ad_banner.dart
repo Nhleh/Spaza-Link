@@ -128,34 +128,100 @@ class _AdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasLink = ad.linkUrl != null && ad.linkUrl!.isNotEmpty;
     return GestureDetector(
-      onTap: ad.linkUrl == null ? null : _open,
+      onTap: hasLink ? _open : null,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        child: Container(
-          color: AppColors.brandGreenSurface,
-          child: CachedNetworkImage(
-            imageUrl: ad.imageUrl,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            placeholder: (_, __) =>
-                Container(color: AppColors.brandGreenSurface),
-            // Missing image must never break the Shop (spec #17): fall back to
-            // a titled placeholder card.
-            errorWidget: (_, __, ___) => Container(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Ad image.
+            Container(
               color: AppColors.brandGreenSurface,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                ad.title.isEmpty ? 'Advertisement' : ad.title,
-                textAlign: TextAlign.center,
-                style: AppTypography.titleSmall.copyWith(
-                    color: AppColors.brandGreenDark,
-                    fontWeight: FontWeight.w700),
+              child: CachedNetworkImage(
+                imageUrl: ad.imageUrl,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: AppColors.brandGreenSurface),
+                // Missing image must never break the Shop (spec #17).
+                errorWidget: (_, __, ___) =>
+                    Container(color: AppColors.brandGreenPrimary),
               ),
             ),
-          ),
+            // Left-to-right dark scrim so the title/CTA stay readable over any
+            // image.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xCC0A2A18), Color(0x330A2A18), Color(0x00000000)],
+                  stops: [0.0, 0.55, 1.0],
+                ),
+              ),
+              child: SizedBox.expand(),
+            ),
+            // Title + optional CTA.
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Sponsored',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Flexible(
+                    child: Text(
+                      ad.title.isEmpty ? 'Advertisement' : ad.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                  if (hasLink) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Shop Now',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: AppColors.brandGreenDark,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_rounded,
+                              size: 14, color: AppColors.brandGreenDark),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
