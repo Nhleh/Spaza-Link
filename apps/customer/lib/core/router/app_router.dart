@@ -379,9 +379,10 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
     };
 
     if (uid == null) {
-      // Not authenticated: auth screens (incl. Welcome) are allowed; any
-      // protected route sends the user to Login (spec #1).
-      return authRoutes.contains(loc) ? null : RouteConstants.login;
+      // Not authenticated: auth screens are allowed; any protected route sends
+      // the user to Welcome (the shop landing, where Login/Register live). Still
+      // enforces auth — they can't reach the app without signing in.
+      return authRoutes.contains(loc) ? null : RouteConstants.welcome;
     }
 
     final shopAsync = ref.read(currentShopProvider);

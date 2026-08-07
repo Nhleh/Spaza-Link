@@ -121,7 +121,7 @@ class _InactivityGuardState extends ConsumerState<InactivityGuard>
     ref.invalidate(currentUserProvider);
     ref.invalidate(currentShopProvider);
     recordActivityNow(); // reset so we don't re-fire on the next tick
-    ref.read(customerRouterProvider).go(RouteConstants.login);
+    ref.read(customerRouterProvider).go(RouteConstants.welcome);
   }
 
   @override
