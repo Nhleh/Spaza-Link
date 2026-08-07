@@ -91,11 +91,9 @@ class _AdminOrderDetailScreenState
           ),
         ),
         actions: [
-          // Assign to driver + status dropdown + update button
+          // Status dropdown + update button
           Row(
             children: [
-              _AssignDriverButton(order: o),
-              const SizedBox(width: 8),
               _StatusDropdown(
                 value: _selectedStatus!,
                 onChanged: (v) => setState(() => _selectedStatus = v),
@@ -331,12 +329,15 @@ class _AdminOrderDetailScreenState
                     _AdminCard(
                       title: 'Delivery',
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _InfoRow(
                               label: 'Address',
                               value: o.deliveryAddress),
                           if (o.notes?.isNotEmpty == true)
                             _InfoRow(label: 'Notes', value: o.notes!),
+                          const SizedBox(height: 12),
+                          _AssignDriverButton(order: o),
                         ],
                       ),
                     ),
