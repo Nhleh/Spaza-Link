@@ -30,6 +30,8 @@ class SupabaseOrderRepository implements OrderRepository {
           'discount_saved_cents': order.discountAmountCents,
           'delivery_saved_cents': deliverySaved,
           'pool_saved_cents': 0,
+          'delivery_address': order.deliveryAddress,
+          'payment_method': order.paymentMethod,
         })
         .select()
         .single();
@@ -152,7 +154,9 @@ class SupabaseOrderRepository implements OrderRepository {
       subtotalCents: total,
       deliveryFeeCents: 0,
       totalCents: total,
-      deliveryAddress: '',
+      deliveryAddress: r['delivery_address'] as String? ?? '',
+      paymentMethod: r['payment_method'] as String? ?? PaymentMethod.cod,
+      paymentStatus: r['payment_status'] as String? ?? PaymentStatus.pending,
       driverId: r['driver_id'] as String?,
       placedAt: created,
       createdAt: created,

@@ -6,6 +6,7 @@ import 'package:spazalink_core/core.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../cart/providers/cart_provider.dart';
 import '../../orders/providers/order_provider.dart';
+import '../../profile/data/profile_service.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -28,11 +29,48 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // off to type a different one.
   bool _useShopAddress = true;
   bool _prefilled = false;
+  Map<String, dynamic> _prefs = {};
 
-  void _applyShopAddress(ShopModel shop) {
-    _streetCtrl.text = shop.physicalAddress;
-    _cityCtrl.text = shop.city;
-    // Suburb/postal aren't stored on the shop — left for the customer to add.
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedAddress();
+  }
+
+  /// Load the last delivery address the customer used (all four fields) so
+  /// suburb/postal fill in too — the shop record only has street + city.
+  Future<void> _loadSavedAddress() async {
+    final prefs = await ref.read(profileServiceProvider).getPreferences();
+    if (!mounted) return;
+    _prefs = prefs;
+    final d = prefs['delivery'];
+    if (_useShopAddress && d is Map && _hasAny(d)) {
+      _streetCtrl.text = (d['street'] ?? '').toString();
+      _suburbCtrl.text = (d['suburb'] ?? '').toString();
+      _cityCtrl.text = (d['city'] ?? '').toString();
+      _postalCtrl.text = (d['postal'] ?? '').toString();
+      setState(() => _prefilled = true);
+    }
+  }
+
+  bool _hasAny(Map d) => ['street', 'suburb', 'city', 'postal']
+      .any((k) => (d[k]?.toString().trim().isNotEmpty ?? false));
+
+  /// Fill from the saved address if there is one, else the shop's street+city.
+  void _applyDefaultAddress() {
+    final d = _prefs['delivery'];
+    if (d is Map && _hasAny(d)) {
+      _streetCtrl.text = (d['street'] ?? '').toString();
+      _suburbCtrl.text = (d['suburb'] ?? '').toString();
+      _cityCtrl.text = (d['city'] ?? '').toString();
+      _postalCtrl.text = (d['postal'] ?? '').toString();
+      return;
+    }
+    final shop = ref.read(currentShopProvider).valueOrNull;
+    if (shop != null) {
+      _streetCtrl.text = shop.physicalAddress;
+      _cityCtrl.text = shop.city;
+    }
   }
 
   @override
@@ -55,7 +93,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (_useShopAddress && !_prefilled && shop != null) {
       _prefilled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _useShopAddress) _applyShopAddress(shop);
+        if (mounted && _useShopAddress) _applyDefaultAddress();
       });
     }
     final subtotal = ref.watch(cartSubtotalProvider(shopId));
@@ -120,8 +158,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 setState(() {
                   _useShopAddress = v;
                   if (v) {
-                    final s = ref.read(currentShopProvider).valueOrNull;
-                    if (s != null) _applyShopAddress(s);
+                    _applyDefaultAddress();
                   } else {
                     _streetCtrl.clear();
                     _suburbCtrl.clear();
@@ -206,6 +243,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _cityCtrl.text.trim(),
       _postalCtrl.text.trim(),
     ].where((s) => s.isNotEmpty).join(', ');
+
+    // Remember this delivery address (all four fields) so it auto-fills next
+    // time — the shop record only has street + city.
+    _prefs = {
+      ..._prefs,
+      'delivery': {
+        'street': _streetCtrl.text.trim(),
+        'suburb': _suburbCtrl.text.trim(),
+        'city': _cityCtrl.text.trim(),
+        'postal': _postalCtrl.text.trim(),
+      },
+    };
+    ref.read(profileServiceProvider).setPreferences(_prefs);
 
     ref.read(placeOrderProvider.notifier).place(
           shopId: shopId,

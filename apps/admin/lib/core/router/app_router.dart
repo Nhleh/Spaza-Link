@@ -13,6 +13,7 @@ import '../../features/products/screens/admin_product_form_screen.dart';
 import '../../features/products/screens/admin_products_screen.dart';
 import '../../features/messaging/screens/admin_communication_screen.dart';
 import '../../features/ads/screens/admin_ads_screen.dart';
+import '../../features/drivers/screens/admin_drivers_screen.dart';
 import '../../features/pools/screens/admin_pools_screen.dart';
 import '../../features/reports/screens/admin_reports_screen.dart';
 import '../../features/settings/screens/admin_settings_screen.dart';
@@ -172,17 +173,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteConstants.adminDrivers,
                 name: 'admin-drivers',
-                builder: (context, state) =>
-                    const _AdminPlaceholder(title: 'Drivers'),
-                routes: [
-                  GoRoute(
-                    path: 'create',
-                    name: 'admin-driver-create',
-                    builder: (context, state) =>
-                        const _AdminPlaceholder(
-                            title: 'Add Driver'),
-                  ),
-                ],
+                builder: (context, state) => const AdminDriversScreen(),
               ),
             ],
           ),

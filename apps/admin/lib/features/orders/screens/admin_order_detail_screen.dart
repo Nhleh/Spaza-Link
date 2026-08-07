@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
+import '../../drivers/data/admin_drivers_repository.dart';
+import '../../drivers/providers/admin_drivers_provider.dart';
 import '../providers/order_provider.dart';
 
 class AdminOrderDetailScreen extends ConsumerStatefulWidget {
@@ -89,9 +91,11 @@ class _AdminOrderDetailScreenState
           ),
         ),
         actions: [
-          // Status dropdown + update button
+          // Assign to driver + status dropdown + update button
           Row(
             children: [
+              _AssignDriverButton(order: o),
+              const SizedBox(width: 8),
               _StatusDropdown(
                 value: _selectedStatus!,
                 onChanged: (v) => setState(() => _selectedStatus = v),
@@ -547,6 +551,204 @@ class _StatusDropdown extends StatelessWidget {
           onChanged: (v) { if (v != null) onChanged(v); },
         ),
       ),
+    );
+  }
+}
+
+// ── Assign to driver ──────────────────────────────────────────────────────────
+
+class _AssignDriverButton extends StatelessWidget {
+  const _AssignDriverButton({required this.order});
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final assigned = order.driverId != null && order.driverId!.isNotEmpty;
+    return OutlinedButton.icon(
+      onPressed: () => showDialog(
+        context: context,
+        builder: (_) => _AssignDialog(order: order),
+      ),
+      icon: const Icon(Icons.delivery_dining_rounded, size: 16),
+      label: Text(assigned ? 'Reassign driver' : 'Assign driver',
+          style: const TextStyle(fontSize: 13)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.brandGreenPrimary,
+        side: const BorderSide(color: AppColors.brandGreenPrimary),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
+
+class _AssignDialog extends ConsumerStatefulWidget {
+  const _AssignDialog({required this.order});
+  final OrderModel order;
+
+  @override
+  ConsumerState<_AssignDialog> createState() => _AssignDialogState();
+}
+
+class _AssignDialogState extends ConsumerState<_AssignDialog> {
+  String? _driverId;
+  final _pickup = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _driverId = (widget.order.driverId?.isNotEmpty ?? false)
+        ? widget.order.driverId
+        : null;
+  }
+
+  @override
+  void dispose() {
+    _pickup.dispose();
+    super.dispose();
+  }
+
+  Future<void> _assign() async {
+    if (_driverId == null) {
+      _snack('Pick a driver.', error: true);
+      return;
+    }
+    if (_pickup.text.trim().isEmpty) {
+      _snack('Enter the pickup location.', error: true);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await ref.read(adminDriversRepositoryProvider).assignOrder(
+            orderId: widget.order.id,
+            driverId: _driverId!,
+            pickupAddress: _pickup.text,
+          );
+      if (!mounted) return;
+      ref.invalidate(adminOrderDetailProvider(widget.order.id));
+      ref.invalidate(adminOrdersProvider(null));
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Order assigned to driver.'),
+        backgroundColor: AppColors.brandGreenPrimary,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snack('Assign failed: $e', error: true);
+    }
+  }
+
+  void _snack(String m, {bool error = false}) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m),
+        backgroundColor: error ? AppColors.error : AppColors.brandGreenPrimary,
+      ));
+
+  @override
+  Widget build(BuildContext context) {
+    final driversAsync = ref.watch(adminDriversProvider);
+    return AlertDialog(
+      backgroundColor: AppColors.adminDarkSurface,
+      title: const Text('Assign delivery',
+          style: TextStyle(color: AppColors.darkOnSurface)),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Driver',
+                style: TextStyle(color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 6),
+            driversAsync.when(
+              loading: () => const LinearProgressIndicator(
+                  color: AppColors.brandGreenPrimary),
+              error: (e, _) => const Text('Could not load drivers',
+                  style: TextStyle(color: AppColors.error)),
+              data: (drivers) {
+                if (drivers.isEmpty) {
+                  return const Text(
+                    'No drivers yet — add one on the Drivers page first.',
+                    style: TextStyle(color: AppColors.darkOnSurfaceVariant),
+                  );
+                }
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.darkOutline),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _driverId,
+                      isExpanded: true,
+                      dropdownColor: AppColors.adminDarkSurface,
+                      hint: const Text('Select a driver',
+                          style: TextStyle(color: AppColors.darkOnSurfaceVariant)),
+                      style: const TextStyle(color: AppColors.darkOnSurface),
+                      items: [
+                        for (final DriverInfo d in drivers)
+                          DropdownMenuItem(
+                            value: d.id,
+                            child: Text(d.phone.isEmpty
+                                ? d.name
+                                : '${d.name} · ${d.phone}'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _driverId = v),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            const Text('Pickup location',
+                style: TextStyle(color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _pickup,
+              style: const TextStyle(color: AppColors.darkOnSurface),
+              decoration: InputDecoration(
+                hintText: 'Where the driver collects the order',
+                hintStyle: const TextStyle(color: AppColors.darkOnSurfaceVariant),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.darkOutline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.brandGreenPrimary),
+                ),
+              ),
+            ),
+            if (widget.order.deliveryAddress.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Delivery to: ${widget.order.deliveryAddress}',
+                  style: const TextStyle(
+                      color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: _saving ? null : () => Navigator.pop(context),
+            child: const Text('Cancel')),
+        FilledButton(
+          style: FilledButton.styleFrom(
+              backgroundColor: AppColors.brandGreenPrimary),
+          onPressed: _saving ? null : _assign,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.white))
+              : const Text('Assign'),
+        ),
+      ],
     );
   }
 }
