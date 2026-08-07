@@ -214,11 +214,14 @@ class _Timeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = _indexFor(status);
+    // Delivered is the terminal state — the final step is complete (ticked),
+    // not "in progress".
+    final isDelivered = status == OrderStatus.delivered;
     return Column(
       children: List.generate(_steps.length, (i) {
         final step = _steps[i];
-        final isDone = i < current;
-        final isCurrent = i == current;
+        final isDone = i < current || (isDelivered && i == current);
+        final isCurrent = i == current && !isDelivered;
         final isLast = i == _steps.length - 1;
         final active = isDone || isCurrent;
 

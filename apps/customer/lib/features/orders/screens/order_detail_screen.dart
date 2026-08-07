@@ -200,8 +200,14 @@ class OrderDetailScreen extends ConsumerWidget {
                   _DetailRow(
                     icon: Icons.check_circle_outline_rounded,
                     label: 'Status',
-                    value: _paymentStatusLabel(o.paymentStatus),
-                    valueColor: o.paymentStatus == PaymentStatus.paid
+                    // A delivered order is paid (cash collected on delivery).
+                    value: _paymentStatusLabel(
+                      o.status == OrderStatus.delivered
+                          ? PaymentStatus.paid
+                          : o.paymentStatus,
+                    ),
+                    valueColor: (o.status == OrderStatus.delivered ||
+                            o.paymentStatus == PaymentStatus.paid)
                         ? AppColors.brandGreenPrimary
                         : null,
                   ),

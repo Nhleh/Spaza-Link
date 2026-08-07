@@ -24,6 +24,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   String _paymentMethod = PaymentMethod.cod;
 
+  // Delivery defaults to the shop's own address; the customer can switch this
+  // off to type a different one.
+  bool _useShopAddress = true;
+  bool _prefilled = false;
+
+  void _applyShopAddress(ShopModel shop) {
+    _streetCtrl.text = shop.physicalAddress;
+    _cityCtrl.text = shop.city;
+    // Suburb/postal aren't stored on the shop — left for the customer to add.
+  }
+
   @override
   void dispose() {
     _streetCtrl.dispose();
@@ -36,8 +47,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final shopId = ref.watch(currentShopProvider).valueOrNull?.id ?? '';
+    final shop = ref.watch(currentShopProvider).valueOrNull;
+    final shopId = shop?.id ?? '';
     final uid = ref.watch(authUidProvider).valueOrNull ?? '';
+
+    // Pre-fill the delivery address with the shop's address once it's loaded.
+    if (_useShopAddress && !_prefilled && shop != null) {
+      _prefilled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _useShopAddress) _applyShopAddress(shop);
+      });
+    }
     final subtotal = ref.watch(cartSubtotalProvider(shopId));
     final fee = ref.watch(cartDeliveryFeeProvider(shopId));
     final total = ref.watch(cartTotalProvider(shopId));
@@ -93,6 +113,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             // ── Delivery address ───────────────────────────────────────────
             _SectionHeader(title: 'Delivery Address'),
+            const SizedBox(height: AppSpacing.sm),
+            _UseShopAddressToggle(
+              value: _useShopAddress,
+              onChanged: (v) {
+                setState(() {
+                  _useShopAddress = v;
+                  if (v) {
+                    final s = ref.read(currentShopProvider).valueOrNull;
+                    if (s != null) _applyShopAddress(s);
+                  } else {
+                    _streetCtrl.clear();
+                    _suburbCtrl.clear();
+                    _cityCtrl.clear();
+                    _postalCtrl.clear();
+                  }
+                });
+              },
+            ),
             const SizedBox(height: AppSpacing.md),
             _AddressForm(
               streetCtrl: _streetCtrl,
@@ -192,6 +230,48 @@ class _SectionHeader extends StatelessWidget {
       style: AppTypography.titleSmall.copyWith(
         fontWeight: FontWeight.w700,
         color: AppColors.lightOnSurface,
+      ),
+    );
+  }
+}
+
+/// Toggle: deliver to the shop's own address (default) or a different one.
+class _UseShopAddressToggle extends StatelessWidget {
+  const _UseShopAddressToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.lightOutlineVariant),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.storefront_rounded,
+              size: 18, color: AppColors.brandGreenPrimary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              value ? 'Deliver to my shop address' : 'Use a different address',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.lightOnSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: AppColors.brandGreenPrimary,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }
