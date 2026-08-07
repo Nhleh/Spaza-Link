@@ -206,31 +206,45 @@ class _CartItemTile extends ConsumerWidget {
 
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Price + qty row
+                  // Price + qty row. Prices are flexible so a long sale price
+                  // never pushes the quantity stepper off-screen (was a ~5px
+                  // right overflow).
                   Row(
                     children: [
-                      // Line total
-                      Text(
-                        CurrencyFormatter.format(item.lineTotalCents),
-                        style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.lightOnSurface,
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                CurrencyFormatter.format(item.lineTotalCents),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleSmall.copyWith(
+                                  color: AppColors.lightOnSurface,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            if (item.salePriceCents != null) ...[
+                              const SizedBox(width: AppSpacing.sm),
+                              Flexible(
+                                child: Text(
+                                  CurrencyFormatter.format(
+                                      item.priceCents * item.quantity),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.lightOnSurfaceVariant,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
 
-                      if (item.salePriceCents != null) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          CurrencyFormatter.format(
-                              item.priceCents * item.quantity),
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.lightOnSurfaceVariant,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                      ],
-
-                      const Spacer(),
+                      const SizedBox(width: AppSpacing.sm),
 
                       // Qty controls
                       _QtyRow(item: item, shopId: shopId),

@@ -53,7 +53,7 @@ class SupabaseOrderRepository implements OrderRepository {
   Stream<List<OrderModel>> watchOrders({required String shopId}) async* {
     final rows = await _sb
         .from(_orders)
-        .select()
+        .select('*, order_items(*)')
         .eq('shop_id', shopId)
         .order('created_at', ascending: false);
     yield (rows as List)
@@ -69,7 +69,7 @@ class SupabaseOrderRepository implements OrderRepository {
   }) async {
     final rows = await _sb
         .from(_orders)
-        .select()
+        .select('*, order_items(*)')
         .eq('shop_id', shopId)
         .order('created_at', ascending: false)
         .limit(limit);
@@ -130,6 +130,14 @@ class SupabaseOrderRepository implements OrderRepository {
   OrderModel _fromRow(Map<String, dynamic> r, {List<OrderItemModel>? items}) {
     final total = (r['total_cents'] as num?)?.toInt() ?? 0;
     final created = _parseDt(r['created_at']);
+    // Items may arrive nested from a `order_items(*)` join, or be passed in.
+    final nested = r['order_items'];
+    final resolvedItems = items ??
+        (nested is List
+            ? nested
+                .map((i) => _itemFromRow(i as Map<String, dynamic>))
+                .toList()
+            : const <OrderItemModel>[]);
     return OrderModel(
       id: r['id'] as String? ?? '',
       localUuid: r['local_uuid'] as String? ?? '',
@@ -137,7 +145,10 @@ class SupabaseOrderRepository implements OrderRepository {
       shopId: r['shop_id'] as String? ?? '',
       customerId: r['customer_id'] as String? ?? '',
       status: r['status'] as String? ?? OrderStatus.pending,
-      items: items ?? const [],
+      // Read from Supabase → already persisted on the server, so it's synced
+      // (not a local, pending-sync order). Removes the "Pending sync" label.
+      syncStatus: SyncStatus.synced,
+      items: resolvedItems,
       subtotalCents: total,
       deliveryFeeCents: 0,
       totalCents: total,

@@ -130,8 +130,15 @@ class _AdCard extends StatelessWidget {
     if (link == null || link.isEmpty) return;
     final uri = Uri.tryParse(link);
     if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
+    // Don't gate on canLaunchUrl — on Android 11+ it returns false for https
+    // unless a <queries> entry is declared, which silently blocked the link.
+    // Open in the external browser; pressing Back returns to the app.
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (_) {/* nothing we can do */}
     }
   }
 
