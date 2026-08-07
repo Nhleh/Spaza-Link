@@ -4,6 +4,7 @@ import 'package:spazalink_core/core.dart';
 
 import '../data/admin_drivers_repository.dart';
 import '../providers/admin_drivers_provider.dart';
+import 'admin_driver_detail_screen.dart';
 
 /// Driver account management (create + list). Delivery assignment happens from
 /// the order detail screen.
@@ -93,42 +94,54 @@ class _DriverRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.adminDarkSurface,
+    return Material(
+      color: AppColors.adminDarkSurface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkOutline),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.brandGreenPrimary.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.delivery_dining_rounded,
-                color: AppColors.brandGreenPrimary, size: 22),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => AdminDriverDetailScreen(driver: driver),
+        )),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.darkOutline),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(driver.name,
-                    style: const TextStyle(
-                        color: AppColors.darkOnSurface,
-                        fontWeight: FontWeight.w700)),
-                if (driver.phone.isNotEmpty)
-                  Text(driver.phone,
-                      style: const TextStyle(
-                          color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
-              ],
-            ),
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.brandGreenPrimary.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delivery_dining_rounded,
+                    color: AppColors.brandGreenPrimary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(driver.name,
+                        style: const TextStyle(
+                            color: AppColors.darkOnSurface,
+                            fontWeight: FontWeight.w700)),
+                    if (driver.phone.isNotEmpty)
+                      Text(driver.phone,
+                          style: const TextStyle(
+                              color: AppColors.darkOnSurfaceVariant,
+                              fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.darkOnSurfaceVariant),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

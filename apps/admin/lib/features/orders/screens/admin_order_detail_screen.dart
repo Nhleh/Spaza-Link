@@ -4,6 +4,7 @@ import 'package:spazalink_core/core.dart';
 
 import '../../drivers/data/admin_drivers_repository.dart';
 import '../../drivers/providers/admin_drivers_provider.dart';
+import '../../drivers/widgets/pod_card.dart';
 import '../providers/order_provider.dart';
 
 class AdminOrderDetailScreen extends ConsumerStatefulWidget {
@@ -361,6 +362,11 @@ class _AdminOrderDetailScreenState
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Proof of delivery (signed slip + PDF download)
+                    PodCard(orderId: o.id, orderRef: displayRef),
                   ],
                 ),
               ),

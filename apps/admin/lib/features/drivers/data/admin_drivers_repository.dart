@@ -16,6 +16,41 @@ class DriverInfo {
       );
 }
 
+/// One order handled by a driver.
+class DriverDelivery {
+  const DriverDelivery({
+    required this.orderId,
+    required this.status,
+    required this.totalCents,
+    required this.placedAt,
+    this.deliveredAt,
+    this.deliveryAddress = '',
+  });
+
+  final String orderId;
+  final String status;
+  final int totalCents;
+  final DateTime placedAt;
+  final DateTime? deliveredAt;
+  final String deliveryAddress;
+
+  String get ref => orderId.split('-').first.toUpperCase();
+  bool get isActive => status == 'assigned' || status == 'out_for_delivery';
+  bool get isDelivered => status == 'delivered';
+
+  factory DriverDelivery.fromRow(Map<String, dynamic> r) {
+    DateTime? dt(dynamic v) => v == null ? null : DateTime.tryParse(v.toString());
+    return DriverDelivery(
+      orderId: r['id'] as String? ?? '',
+      status: r['status'] as String? ?? 'pending',
+      totalCents: (r['total_cents'] as num?)?.toInt() ?? 0,
+      placedAt: dt(r['created_at']) ?? DateTime.now(),
+      deliveredAt: dt(r['delivered_at']),
+      deliveryAddress: r['delivery_address'] as String? ?? '',
+    );
+  }
+}
+
 /// A driver's last reported position (only readable while actively delivering).
 class DriverLocation {
   const DriverLocation({required this.lat, required this.lng, required this.updatedAt});
@@ -90,6 +125,19 @@ class AdminDriversRepository {
       'email': email.trim(),
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', driverId);
+  }
+
+  /// Every order ever handed to this driver (newest first) — for the driver
+  /// detail view (today's count, what they delivered, current job).
+  Future<List<DriverDelivery>> driverOrders(String driverId) async {
+    final rows = await _sb
+        .from('orders')
+        .select('id, status, total_cents, created_at, delivered_at, delivery_address')
+        .eq('driver_id', driverId)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((r) => DriverDelivery.fromRow(r as Map<String, dynamic>))
+        .toList();
   }
 
   /// The driver's latest position — returns null unless they're actively
