@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
@@ -5,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../data/admin_drivers_repository.dart';
 import '../providers/admin_drivers_provider.dart';
+import '../widgets/live_map.dart';
 
 /// Driver detail: current delivery + live location, today's deliveries, and the
 /// full list of orders they've delivered.
@@ -145,45 +148,77 @@ class AdminDriverDetailScreen extends ConsumerWidget {
   }
 }
 
-class _LocationRow extends ConsumerWidget {
+/// Live location: an embedded Google Map that auto-refreshes every 15s while
+/// the driver is on an active job.
+class _LocationRow extends ConsumerStatefulWidget {
   const _LocationRow({required this.driverId});
   final String driverId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final locAsync = ref.watch(driverLocationProvider(driverId));
+  ConsumerState<_LocationRow> createState() => _LocationRowState();
+}
+
+class _LocationRowState extends ConsumerState<_LocationRow> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) ref.invalidate(driverLocationProvider(widget.driverId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locAsync = ref.watch(driverLocationProvider(widget.driverId));
     return locAsync.maybeWhen(
       data: (loc) {
         if (loc == null) {
           return const Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text('Live location not reported yet.',
-                style: TextStyle(color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
+                style: TextStyle(
+                    color: AppColors.darkOnSurfaceVariant, fontSize: 12)),
           );
         }
         return Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Row(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.my_location_rounded,
-                  size: 16, color: AppColors.brandGreenPrimary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Location: ${loc.lat.toStringAsFixed(5)}, ${loc.lng.toStringAsFixed(5)}',
-                  style: const TextStyle(color: AppColors.darkOnSurface, fontSize: 13),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () => launchUrl(
-                  Uri.parse(
-                      'https://www.google.com/maps?q=${loc.lat},${loc.lng}'),
-                  mode: LaunchMode.externalApplication,
-                ),
-                icon: const Icon(Icons.map_rounded, size: 16),
-                label: const Text('Open map'),
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.brandGreenPrimary),
+              LiveMap(lat: loc.lat, lng: loc.lng),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.my_location_rounded,
+                      size: 15, color: AppColors.brandGreenPrimary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Live • ${loc.lat.toStringAsFixed(5)}, ${loc.lng.toStringAsFixed(5)}',
+                      style: const TextStyle(
+                          color: AppColors.darkOnSurfaceVariant, fontSize: 12),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => launchUrl(
+                      Uri.parse(
+                          'https://www.google.com/maps?q=${loc.lat},${loc.lng}'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                    label: const Text('Open in Maps'),
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.brandGreenPrimary),
+                  ),
+                ],
               ),
             ],
           ),
