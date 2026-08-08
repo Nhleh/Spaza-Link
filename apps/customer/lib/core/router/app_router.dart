@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/otp_screen.dart';
 import '../../features/auth/screens/pending_approval_screen.dart';
@@ -71,6 +72,19 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
         path: RouteConstants.login,
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+
+      GoRoute(
+        path: RouteConstants.forgotPassword,
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+
+      GoRoute(
+        path: RouteConstants.resetPassword,
+        name: 'reset-password',
+        builder: (context, state) =>
+            ResetPasswordScreen(email: (state.extra as String?) ?? ''),
       ),
 
       GoRoute(
@@ -372,6 +386,8 @@ String? Function(BuildContext, GoRouterState) _buildRedirect(Ref ref) {
       RouteConstants.splash,
       RouteConstants.welcome,
       RouteConstants.login,
+      RouteConstants.forgotPassword,
+      RouteConstants.resetPassword,
       RouteConstants.otpVerify,
       RouteConstants.register,
       RouteConstants.pendingApproval,

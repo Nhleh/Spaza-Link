@@ -180,6 +180,44 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() => _sb.auth.signOut();
 
+  // ── Password reset (forgot password) ─────────────────────────────────────────
+  /// Emails a 6-digit recovery code to [email].
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _sb.auth.resetPasswordForEmail(email.trim());
+    } on supa.AuthException catch (e) {
+      throw AuthException(message: e.message, code: 'reset-failed');
+    } catch (e) {
+      throw const AuthException(
+          message: 'Could not send the reset code. Check your connection.',
+          code: 'network-error');
+    }
+  }
+
+  /// Verifies the emailed recovery [token] and sets [newPassword], then signs
+  /// out so the user logs in fresh with their new password.
+  Future<void> confirmPasswordReset({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      await _sb.auth.verifyOTP(
+        email: email.trim(),
+        token: token.trim(),
+        type: supa.OtpType.recovery,
+      );
+      await _sb.auth.updateUser(supa.UserAttributes(password: newPassword));
+      await _sb.auth.signOut();
+    } on supa.AuthException catch (e) {
+      throw AuthException(
+          message: e.message.contains('expired') || e.message.contains('invalid')
+              ? 'That code is invalid or has expired. Request a new one.'
+              : e.message,
+          code: 'invalid-code');
+    }
+  }
+
   // ── OTP (not used with Supabase email/password) ──────────────────────────────
   @override
   Future<void> verifyPhone(

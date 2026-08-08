@@ -77,9 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _forgotPassword() {
-    context.showSuccessSnack(
-      'To reset your password, contact us on WhatsApp and we\'ll help you.',
-    );
+    context.push(RouteConstants.forgotPassword);
   }
 
   @override
