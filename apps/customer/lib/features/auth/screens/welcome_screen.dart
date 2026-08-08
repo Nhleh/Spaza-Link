@@ -19,16 +19,17 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Full-screen shop background. `cover` fills any phone size/aspect
-          // ratio without distortion; centring keeps the shop entrance and the
-          // sunset in view and only trims the side edges on narrow screens.
+          // Full shop background, shown uncropped. `contain` guarantees the
+          // entire photo is visible exactly as supplied — the dark backdrop
+          // fills any thin letterbox area (the image ratio is near-identical to
+          // a phone screen, so bars are minimal).
           Image.asset(
-            'assets/images/splash.png',
-            fit: BoxFit.cover,
+            'assets/images/welcome.png',
+            fit: BoxFit.contain,
             alignment: Alignment.center,
           ),
           // Subtle scrim — clear at the top, darker toward the bottom — so the
