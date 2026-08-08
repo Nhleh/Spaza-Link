@@ -72,3 +72,9 @@ coverage/
 # Hive
 *.hive
 *.lock
+
+# Release signing (never commit)
+keys/
+*.jks
+*.keystore
+**/key.properties
