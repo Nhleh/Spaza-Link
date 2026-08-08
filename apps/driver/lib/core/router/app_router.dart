@@ -7,8 +7,8 @@ import '../../features/auth/providers/driver_auth_provider.dart';
 import '../../features/auth/screens/driver_login_screen.dart';
 import '../../features/auth/screens/driver_otp_screen.dart';
 import '../../features/deliveries/models/delivery.dart';
-import '../../features/deliveries/screens/deliveries_list_screen.dart';
 import '../../features/deliveries/screens/delivery_detail_screen.dart';
+import '../../features/deliveries/screens/driver_home_screen.dart';
 import '../../features/deliveries/screens/driver_splash_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever driver auth state changes.
@@ -65,7 +65,7 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteConstants.driverDeliveries,
         name: 'driver-deliveries',
-        builder: (context, state) => const DeliveriesListScreen(),
+        builder: (context, state) => const DriverHomeScreen(),
         routes: [
           GoRoute(
             path: ':deliveryId',

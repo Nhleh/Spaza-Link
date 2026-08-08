@@ -15,7 +15,7 @@ class DriverDeliveryRepository {
   String? get _uid => _sb.auth.currentUser?.id;
 
   static const _select =
-      '*, order_items(*), shops(shop_name, physical_address, city)';
+      '*, order_items(*), shops(shop_name, owner_name, physical_address, city)';
 
   /// Active jobs: assigned (to pick up) or out for delivery.
   Future<List<Delivery>> myActiveDeliveries() async {
@@ -27,6 +27,22 @@ class DriverDeliveryRepository {
         .eq('driver_id', uid)
         .inFilter('status', ['assigned', 'out_for_delivery'])
         .order('created_at', ascending: true);
+    return (rows as List)
+        .map((r) => Delivery.fromRow(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Completed deliveries (newest first) — for the History tab + stats.
+  Future<List<Delivery>> myHistory() async {
+    final uid = _uid;
+    if (uid == null) return const [];
+    final rows = await _sb
+        .from('orders')
+        .select(_select)
+        .eq('driver_id', uid)
+        .eq('status', 'delivered')
+        .order('delivered_at', ascending: false)
+        .limit(200);
     return (rows as List)
         .map((r) => Delivery.fromRow(r as Map<String, dynamic>))
         .toList();

@@ -88,14 +88,14 @@ class PodCard extends ConsumerWidget {
   /// produces the downloadable proof.
   void _downloadPdf(String imageUrl, String ref) {
     final content = '''
-<!doctype html><html><head><title>Proof of Delivery — $ref</title>
+<!doctype html><html><head><meta charset="utf-8"><title>Proof of Delivery - $ref</title>
 <style>body{margin:0;font-family:Arial,sans-serif;text-align:center}
 h3{margin:16px}img{max-width:100%;}</style></head>
 <body onload="setTimeout(function(){window.print();},400)">
-<h3>SpazaLink — Proof of Delivery — Order #$ref</h3>
+<h3>SpazaLink - Proof of Delivery - Order #$ref</h3>
 <img src="$imageUrl"/>
 </body></html>''';
-    final blob = html.Blob([content], 'text/html');
+    final blob = html.Blob([content], 'text/html;charset=utf-8');
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.window.open(url, '_blank');
   }

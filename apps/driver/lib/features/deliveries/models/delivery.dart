@@ -11,6 +11,8 @@ class Delivery {
     required this.paymentStatus,
     required this.items,
     required this.shopName,
+    required this.customerName,
+    this.deliveredAt,
   });
 
   final String orderId;
@@ -23,6 +25,8 @@ class Delivery {
   final String paymentStatus;
   final List<DeliveryItem> items;
   final String shopName;
+  final String customerName;
+  final DateTime? deliveredAt;
 
   String get ref => orderId.split('-').first.toUpperCase();
   bool get isAssigned => status == 'assigned';
@@ -46,6 +50,8 @@ class Delivery {
       paymentMethod: r['payment_method'] as String? ?? 'cod',
       paymentStatus: r['payment_status'] as String? ?? 'pending',
       shopName: shop is Map ? (shop['shop_name'] as String? ?? '') : '',
+      customerName: shop is Map ? (shop['owner_name'] as String? ?? '') : '',
+      deliveredAt: DateTime.tryParse('${r['delivered_at']}')?.toLocal(),
       items: itemRows
           .map((i) => DeliveryItem.fromRow(i as Map<String, dynamic>))
           .toList(),

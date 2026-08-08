@@ -18,3 +18,10 @@ final deliveryDetailProvider =
     FutureProvider.family<Delivery?, String>((ref, orderId) {
   return ref.watch(driverDeliveryRepositoryProvider).getDelivery(orderId);
 });
+
+/// Completed deliveries (History + stats).
+final myHistoryProvider = FutureProvider<List<Delivery>>((ref) {
+  final uid = ref.watch(driverAuthUidProvider).valueOrNull;
+  if (uid == null) return Future.value(const <Delivery>[]);
+  return ref.watch(driverDeliveryRepositoryProvider).myHistory();
+});

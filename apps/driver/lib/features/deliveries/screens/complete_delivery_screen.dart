@@ -22,6 +22,7 @@ class CompleteDeliveryScreen extends ConsumerStatefulWidget {
 class _CompleteDeliveryScreenState
     extends ConsumerState<CompleteDeliveryScreen> {
   late final SignatureController _sig;
+  late final TextEditingController _receivedBy;
   bool _cashCollected = false;
   bool _busy = false;
 
@@ -33,31 +34,40 @@ class _CompleteDeliveryScreenState
       penColor: AppColors.lightOnSurface,
       exportBackgroundColor: AppColors.white,
     );
+    _receivedBy =
+        TextEditingController(text: widget.delivery.customerName);
   }
 
   @override
   void dispose() {
     _sig.dispose();
+    _receivedBy.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final d = widget.delivery;
+    if (_receivedBy.text.trim().isEmpty) {
+      _snack('Enter the name of the person who received the order.');
+      return;
+    }
     if (_sig.isEmpty) {
       _snack('Please ask the customer to sign first.');
       return;
     }
-    if (d.isCod && !_cashCollected) {
+    if (widget.delivery.isCod && !_cashCollected) {
       _snack('Confirm the cash was collected to complete this delivery.');
       return;
     }
     setState(() => _busy = true);
     try {
+      final repo = ref.read(driverDeliveryRepositoryProvider);
+      // Re-fetch so the invoice has the freshest item detail.
+      final d = await repo.getDelivery(widget.delivery.orderId) ?? widget.delivery;
       final sigPng = await _sig.toPngBytes();
       if (sigPng == null) throw Exception('Could not read the signature.');
-      final slipPng = await _buildSlip(d, sigPng);
+      final slipPng = await _buildSlip(d, sigPng, _receivedBy.text.trim());
 
-      await ref.read(driverDeliveryRepositoryProvider).completeDelivery(
+      await repo.completeDelivery(
             orderId: d.orderId,
             signaturePng: sigPng,
             slipPng: slipPng,
@@ -104,6 +114,32 @@ class _CompleteDeliveryScreenState
               style: AppTypography.titleSmall
                   .copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: AppSpacing.md),
+
+          Text('Received by (customer name)',
+              style: AppTypography.labelMedium
+                  .copyWith(color: AppColors.lightOnSurfaceVariant)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _receivedBy,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: 'Full name of the person who received the order',
+              prefixIcon: const Icon(Icons.person_rounded, size: 20),
+              filled: true,
+              fillColor: AppColors.white,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide:
+                    const BorderSide(color: AppColors.lightOutlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide:
+                    const BorderSide(color: AppColors.brandGreenPrimary),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
 
           Text('Customer signature',
               style: AppTypography.labelMedium
@@ -173,74 +209,163 @@ class _CompleteDeliveryScreenState
     );
   }
 
-  /// Compose the signed proof-of-delivery slip (order details + signature) into
-  /// a single PNG using a Canvas — no extra packages.
-  Future<Uint8List> _buildSlip(Delivery d, Uint8List signaturePng) async {
+  static String _fmtDate(DateTime d) {
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final hh = d.hour.toString().padLeft(2, '0');
+    final mm = d.minute.toString().padLeft(2, '0');
+    return '${d.day} ${m[d.month - 1]} ${d.year}, $hh:$mm';
+  }
+
+  /// Compose a detailed signed invoice (header, itemised table, totals, payment,
+  /// signature) into a single PNG using a Canvas — no extra packages.
+  Future<Uint8List> _buildSlip(
+      Delivery d, Uint8List signaturePng, String receivedBy) async {
     final codec = await ui.instantiateImageCodec(signaturePng);
     final sigImage = (await codec.getNextFrame()).image;
 
-    const width = 720.0;
+    const width = 780.0;
+    const margin = 44.0;
+    const ink = Color(0xFF1A2B1F);
+    const muted = Color(0xFF64748B);
+    const green = Color(0xFF0B8F47);
+    const rule = Color(0xFFE2E8F0);
+
     final recorder = ui.PictureRecorder();
-    // Two-pass: first measure by drawing to a tall canvas, then crop height.
     final canvas = Canvas(recorder);
-    canvas.drawRect(const Rect.fromLTWH(0, 0, width, 1600),
+    canvas.drawRect(const Rect.fromLTWH(0, 0, width, 2400),
         Paint()..color = const Color(0xFFFFFFFF));
 
-    double y = 32;
-    void line(String text,
-        {double size = 20, bool bold = false, Color color = const Color(0xFF1A2B1F)}) {
+    double y = 0;
+
+    void draw(String s, double x,
+        {double size = 15,
+        bool bold = false,
+        Color color = ink,
+        double? maxW,
+        bool right = false}) {
       final tp = TextPainter(
         text: TextSpan(
-          text: text,
-          style: TextStyle(
-              color: color,
-              fontSize: size,
-              fontWeight: bold ? FontWeight.w800 : FontWeight.w400),
-        ),
+            text: s,
+            style: TextStyle(
+                color: color,
+                fontSize: size,
+                fontWeight: bold ? FontWeight.w800 : FontWeight.w400)),
         textDirection: TextDirection.ltr,
         maxLines: 3,
-      )..layout(maxWidth: width - 64);
-      tp.paint(canvas, Offset(32, y));
-      y += tp.height + 8;
+      )..layout(maxWidth: maxW ?? (width - margin - x));
+      tp.paint(canvas, Offset(right ? (width - margin - tp.width) : x, y));
     }
 
-    line('SpazaLink — Proof of Delivery', size: 24, bold: true, color: const Color(0xFF0B8F47));
-    line('Order #${d.ref}', size: 18, bold: true);
-    line('Date: ${DateTime.now().toLocal()}'.split('.').first, size: 14, color: const Color(0xFF4A5E4E));
-    y += 6;
-    line('Items', size: 16, bold: true);
-    for (final it in d.items) {
-      line('• ${it.name}  ×${it.qty}   ${CurrencyFormatter.format(it.lineTotalCents)}',
-          size: 14);
+    void hr() => canvas.drawLine(Offset(margin, y), Offset(width - margin, y),
+        Paint()
+          ..color = rule
+          ..strokeWidth = 1.2);
+
+    // ── Header band ──
+    canvas.drawRect(const Rect.fromLTWH(0, 0, width, 104),
+        Paint()..color = green);
+    y = 28;
+    draw('SpazaLink', margin, size: 30, bold: true, color: const Color(0xFFFFFFFF));
+    y = 66;
+    draw('DELIVERY INVOICE  •  PROOF OF DELIVERY', margin,
+        size: 13, color: const Color(0xFFEAF7EF));
+
+    // ── Order meta ──
+    y = 132;
+    draw('Invoice #${d.ref}', margin, size: 20, bold: true);
+    y += 30;
+    draw('Date: ${_fmtDate(DateTime.now())}', margin, size: 14, color: muted);
+    y += 22;
+    if (d.shopName.isNotEmpty) {
+      draw('Shop: ${d.shopName}', margin, size: 14, color: muted);
+      y += 22;
     }
-    y += 4;
-    line('Total: ${CurrencyFormatter.format(d.totalCents)}', size: 18, bold: true);
-    line(
-        d.isCod
-            ? 'Payment: Cash on Delivery — Cash collected: ${_cashCollected ? "Yes" : "No"}'
-            : 'Payment: ${d.paymentMethod}',
-        size: 14, color: const Color(0xFF4A5E4E));
     if (d.deliveryAddress.isNotEmpty) {
-      line('Delivered to: ${d.deliveryAddress}', size: 14, color: const Color(0xFF4A5E4E));
+      draw('Deliver to: ${d.deliveryAddress}', margin, size: 14, color: muted);
+      y += 26;
     }
-    y += 12;
-    line('Received & signed by the customer:', size: 14, bold: true);
-    y += 6;
+    y += 8;
 
-    // Signature (scaled to fit width, keeping aspect).
-    final sigW = width - 64;
+    // ── Items table ──
+    hr();
+    y += 12;
+    draw('ITEM', margin, size: 12, bold: true, color: muted);
+    draw('QTY × PRICE = TOTAL', margin, size: 12, bold: true, color: muted, right: true);
+    y += 24;
+    hr();
+    y += 12;
+
+    var subtotal = 0;
+    for (final it in d.items) {
+      subtotal += it.lineTotalCents;
+      draw(it.name, margin, size: 14, maxW: width - 2 * margin - 250);
+      draw(
+          '${it.qty} × ${CurrencyFormatter.format(it.priceCents)} = ${CurrencyFormatter.format(it.lineTotalCents)}',
+          margin,
+          size: 13,
+          right: true);
+      y += 26;
+    }
+    if (d.items.isEmpty) {
+      draw('(no item detail available)', margin, size: 13, color: muted);
+      y += 26;
+    }
+    y += 6;
+    hr();
+    y += 14;
+
+    final delivery = (d.totalCents - subtotal).clamp(0, d.totalCents);
+    draw('Subtotal', margin, size: 14, color: muted);
+    draw(CurrencyFormatter.format(subtotal), margin, size: 14, right: true);
+    y += 24;
+    draw('Delivery', margin, size: 14, color: muted);
+    draw(CurrencyFormatter.format(delivery), margin, size: 14, right: true);
+    y += 28;
+    draw('TOTAL', margin, size: 19, bold: true);
+    draw(CurrencyFormatter.format(d.totalCents), margin, size: 19, bold: true, right: true);
+    y += 34;
+
+    draw(
+        d.isCod
+            ? 'Payment: Cash on Delivery — ${_cashCollected ? "PAID (cash collected)" : "Unpaid"}'
+            : 'Payment: ${d.paymentMethod}',
+        margin,
+        size: 14,
+        bold: true,
+        color: green);
+    y += 40;
+
+    // ── Signature ──
+    hr();
+    y += 18;
+    draw('Received by: $receivedBy', margin, size: 15, bold: true);
+    y += 26;
+    draw('Received in good condition & signed below:', margin,
+        size: 13, color: muted);
+    y += 30;
+
+    final sigW = width - 2 * margin;
     final scale = sigW / sigImage.width;
     final sigH = sigImage.height * scale;
-    final dst = Rect.fromLTWH(32, y, sigW, sigH);
     canvas.drawImageRect(
       sigImage,
       Rect.fromLTWH(0, 0, sigImage.width.toDouble(), sigImage.height.toDouble()),
-      dst,
+      Rect.fromLTWH(margin, y, sigW, sigH),
       Paint(),
     );
-    y += sigH + 24;
+    y += sigH + 10;
+    canvas.drawLine(Offset(margin, y), Offset(margin + 320, y),
+        Paint()
+          ..color = muted
+          ..strokeWidth = 1);
+    y += 8;
+    draw('Customer signature — ${_fmtDate(DateTime.now())}', margin,
+        size: 11, color: muted);
+    y += 34;
+    draw('Thank you for shopping with SpazaLink', margin, size: 13, color: green);
+    y += 36;
 
-    final height = y.clamp(300.0, 1600.0);
+    final height = y.clamp(500.0, 2400.0);
     final picture = recorder.endRecording();
     final img = await picture.toImage(width.toInt(), height.toInt());
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
