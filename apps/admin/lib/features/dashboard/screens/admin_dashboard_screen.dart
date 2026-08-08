@@ -189,8 +189,8 @@ class AdminDashboardScreen extends ConsumerWidget {
             // ── Recent orders table ────────────────────────────────────────
             ordersAsync.when(
               loading: () => const _TableShimmer(),
-              // Orders isn't on Supabase yet (still Firebase) — don't surface a
-              // scary permission-denied banner; just show nothing for now.
+              // On a transient load error, don't surface a scary banner on the
+              // dashboard — just show nothing for this section.
               error: (_, __) => const SizedBox.shrink(),
               data: (orders) {
                 final recent = [...orders]
@@ -644,27 +644,6 @@ class _TableShimmer extends StatelessWidget {
         color: AppColors.adminDarkSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.adminDarkOutline),
-      ),
-    );
-  }
-}
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        message,
-        style: const TextStyle(color: AppColors.error, fontSize: 13),
       ),
     );
   }

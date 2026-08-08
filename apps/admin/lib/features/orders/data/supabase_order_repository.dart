@@ -1,9 +1,8 @@
 import 'package:spazalink_core/core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supa;
 
-/// Supabase-backed order repository for the Admin app. Drop-in replacement for
-/// AdminFirebaseOrderRepository — reads orders/order_items from Postgres and
-/// updates status. The Supabase `orders` table is leaner than [OrderModel], so
+/// Supabase-backed order repository for the Admin app. Reads orders/order_items
+/// from Postgres and updates status. The Supabase `orders` table is leaner than [OrderModel], so
 /// fields it doesn't store (subtotal, delivery fee, address) are derived or
 /// left blank.
 class SupabaseAdminOrderRepository implements OrderRepository {

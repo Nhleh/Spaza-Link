@@ -262,7 +262,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             BorderRadius.circular(AppSpacing.radiusFull),
                       ),
                       child: Text(
-                        'DEV BUILD · ${AppConfig.instance.firebaseProjectId}',
+                        '${AppConfig.instance.environmentLabel} BUILD',
                         style: AppTypography.labelSmall
                             .copyWith(color: AppColors.brandGold),
                       ),

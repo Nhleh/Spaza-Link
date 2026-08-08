@@ -123,7 +123,7 @@ class _DriverSplashScreenState extends State<DriverSplashScreen>
                             BorderRadius.circular(AppSpacing.radiusFull),
                       ),
                       child: Text(
-                        'DEV BUILD · ${AppConfig.instance.firebaseProjectId}',
+                        '${AppConfig.instance.environmentLabel} BUILD',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.brandGold,
                         ),

@@ -5,7 +5,7 @@
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Permit cleartext HTTP to the local Firebase Emulator Suite (debug only). -->
+    <!-- Permit cleartext HTTP to local dev servers (debug only). -->
     <application
         android:networkSecurityConfig="@xml/network_security_config" />
 </manifest>

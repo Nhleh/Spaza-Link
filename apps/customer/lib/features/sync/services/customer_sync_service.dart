@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:spazalink_core/core.dart';
 
-/// Watches connectivity and flushes pending offline orders to Firestore.
+/// Watches connectivity and flushes pending offline orders to Supabase.
 class CustomerSyncService implements SyncService {
   CustomerSyncService({
     required OrderRepository orderRepository,

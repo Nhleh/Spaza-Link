@@ -9,15 +9,9 @@ enum AppEnvironment { development, staging, production }
 class AppConfig {
   AppConfig._({
     required this.environment,
-    required this.firebaseProjectId,
-    required this.useEmulators,
-    required this.emulatorHost,
   });
 
   final AppEnvironment environment;
-  final String firebaseProjectId;
-  final bool useEmulators;
-  final String emulatorHost;
 
   static AppConfig? _instance;
 
@@ -43,24 +37,12 @@ class AppConfig {
 
   // ── Pre-built configurations ───────────────────────────────────────────────
 
-  static AppConfig get development => AppConfig._(
-        environment: AppEnvironment.development,
-        firebaseProjectId: 'spazalink-d8a59',
-        useEmulators: true,
-        emulatorHost: 'localhost',
-      );
+  static AppConfig get development =>
+      AppConfig._(environment: AppEnvironment.development);
 
-  static AppConfig get staging => AppConfig._(
-        environment: AppEnvironment.staging,
-        firebaseProjectId: 'spazalink-staging',
-        useEmulators: false,
-        emulatorHost: '',
-      );
+  static AppConfig get staging =>
+      AppConfig._(environment: AppEnvironment.staging);
 
-  static AppConfig get production => AppConfig._(
-        environment: AppEnvironment.production,
-        firebaseProjectId: 'spazalink-prod',
-        useEmulators: false,
-        emulatorHost: '',
-      );
+  static AppConfig get production =>
+      AppConfig._(environment: AppEnvironment.production);
 }

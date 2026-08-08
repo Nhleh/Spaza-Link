@@ -1,13 +1,8 @@
 import java.util.Properties
 import java.io.FileInputStream
-import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
-    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -48,11 +43,6 @@ android {
     //   flutter run   --flavor dev     -t lib/main_dev.dart
     //   flutter run   --flavor staging -t lib/main_staging.dart
     //   flutter build apk --flavor prod -t lib/main_prod.dart
-    //
-    // google-services.json must live in:
-    //   android/app/src/dev/google-services.json
-    //   android/app/src/staging/google-services.json
-    //   android/app/src/prod/google-services.json
 
     flavorDimensions += "environment"
 
@@ -98,11 +88,6 @@ android {
             // Minification left off for a safe first signed release.
             isMinifyEnabled = false
             isShrinkResources = false
-            // Don't upload the Crashlytics mapping file at build time — that
-            // network step hangs the release build on this machine.
-            configure<CrashlyticsExtension> {
-                mappingFileUploadEnabled = false
-            }
         }
     }
 }

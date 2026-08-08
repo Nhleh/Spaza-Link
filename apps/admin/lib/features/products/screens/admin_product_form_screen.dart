@@ -66,7 +66,7 @@ class _AdminProductFormScreenState
     _imageUrls = List<String>.from(p?.imageUrls ?? const []);
   }
 
-  /// Pick an image and upload it to Firebase Storage, then keep its URL.
+  /// Pick an image and upload it to Supabase Storage, then keep its URL.
   Future<void> _pickAndUploadImage() async {
     try {
       final file = await ImagePicker().pickImage(

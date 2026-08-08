@@ -154,7 +154,7 @@ final authActionProvider =
 
 // ── Auth state notifier ────────────────────────────────────────────────────────
 
-/// Tracks the OTP verification flow state (separate from Firebase Auth state).
+/// Tracks the OTP verification flow state (separate from Supabase Auth state).
 sealed class OtpFlowState {
   const OtpFlowState();
 }
