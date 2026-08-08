@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:spazalink_core/core.dart';
 
 import '../providers/driver_auth_provider.dart';
 
+/// Driver login — email + password (accounts are created by the admin).
 class DriverLoginScreen extends ConsumerStatefulWidget {
   const DriverLoginScreen({super.key});
 
@@ -14,132 +14,110 @@ class DriverLoginScreen extends ConsumerStatefulWidget {
 
 class _DriverLoginScreenState extends ConsumerState<DriverLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _loading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final raw = _phoneController.text.trim();
-    final phone = raw.startsWith('0')
-        ? '+27${raw.substring(1)}'
-        : raw.startsWith('+27')
-            ? raw
-            : '+27$raw';
-
-    await ref.read(driverOtpFlowProvider.notifier).sendOtp(phone);
-
-    if (!mounted) return;
-    final state = ref.read(driverOtpFlowProvider);
-    if (state is DriverOtpFlowCodeSent) {
-      context.go(RouteConstants.driverOtpVerify, extra: {'phone': phone});
+    setState(() => _loading = true);
+    final repo = ref.read(driverAuthRepositoryProvider);
+    try {
+      await repo.signInWithIdentifier(
+        identifier: _email.text.trim(),
+        password: _password.text,
+        isEmail: true,
+      );
+      // Must be a driver account.
+      final uid = ref.read(driverAuthUidProvider).valueOrNull;
+      final user = uid == null ? null : await repo.getUser(uid);
+      if (user?.role != 'driver') {
+        await repo.signOut();
+        if (!mounted) return;
+        setState(() => _loading = false);
+        _error('This app is for drivers only. Ask the admin for a driver account.');
+        return;
+      }
+      // Success — the router redirect forwards to Deliveries.
+      if (mounted) setState(() => _loading = false);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _error(e.code == 'invalid-credentials'
+          ? 'Incorrect email or password.'
+          : e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      _error('Could not sign in. Please try again.');
     }
   }
 
+  void _error(String m) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(m), backgroundColor: AppColors.error));
+
   @override
   Widget build(BuildContext context) {
-    final otpState = ref.watch(driverOtpFlowProvider);
-    final isLoading = otpState is DriverOtpFlowSending;
-
-    ref.listen(driverOtpFlowProvider, (_, next) {
-      if (next is DriverOtpFlowError) {
-        context.showErrorSnack(next.message);
-      }
-    });
-
     return Scaffold(
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppSpacing.x4l),
-
-                // Wordmark
-                RichText(
-                  text: const TextSpan(children: [
-                    TextSpan(
-                      text: 'Spaza',
-                      style: TextStyle(
-                        fontSize: 32,
+                const Icon(Icons.delivery_dining_rounded,
+                    size: 56, color: AppColors.brandGreenPrimary),
+                const SizedBox(height: AppSpacing.md),
+                Text('SpazaLink Driver',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.headlineMedium.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppColors.brandGreenDark,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'Link',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.brandGold,
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                  ]),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'DRIVER',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.lightOnSurfaceVariant,
-                    letterSpacing: 0.12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.x4l),
-
-                Text('Welcome, Driver', style: AppTypography.headlineMedium),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Enter your registered South African mobile number.',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.lightOnSurfaceVariant,
-                  ),
-                ),
-
+                        color: AppColors.lightOnSurface)),
+                const SizedBox(height: 4),
+                Text('Sign in to see your deliveries',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: AppColors.lightOnSurfaceVariant)),
                 const SizedBox(height: AppSpacing.x3l),
-
                 SpazaTextField(
-                  controller: _phoneController,
-                  label: 'Mobile number',
-                  hint: '082 123 4567',
-                  prefixIcon: Icons.phone_android_rounded,
-                  keyboardType: TextInputType.phone,
-                  validator: Validators.phone,
+                  controller: _email,
+                  label: 'Email',
+                  hint: 'you@example.com',
+                  prefixIcon: Icons.email_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: Validators.requiredEmail,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SpazaTextField(
+                  controller: _password,
+                  label: 'Password',
+                  hint: 'Your password',
+                  prefixIcon: Icons.lock_rounded,
+                  isPassword: true,
+                  validator: Validators.password,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                 ),
-
-                const SizedBox(height: AppSpacing.xxl),
-
+                const SizedBox(height: AppSpacing.xl),
                 SpazaButton(
-                  label: 'Send OTP',
-                  onPressed: isLoading ? null : _submit,
-                  isLoading: isLoading,
+                  label: 'Login',
+                  onPressed: _loading ? null : _submit,
+                  isLoading: _loading,
                   variant: SpazaButtonVariant.primary,
                 ),
-
-                const SizedBox(height: AppSpacing.xl),
-
-                Center(
-                  child: Text(
-                    'Only registered SpazaLink drivers can sign in.',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.lightOnSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
           ),

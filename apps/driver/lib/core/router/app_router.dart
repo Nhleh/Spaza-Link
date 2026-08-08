@@ -6,6 +6,9 @@ import 'package:spazalink_core/core.dart';
 import '../../features/auth/providers/driver_auth_provider.dart';
 import '../../features/auth/screens/driver_login_screen.dart';
 import '../../features/auth/screens/driver_otp_screen.dart';
+import '../../features/deliveries/models/delivery.dart';
+import '../../features/deliveries/screens/deliveries_list_screen.dart';
+import '../../features/deliveries/screens/delivery_detail_screen.dart';
 import '../../features/deliveries/screens/driver_splash_screen.dart';
 
 /// Fires GoRouter re-evaluation whenever driver auth state changes.
@@ -62,22 +65,15 @@ final driverRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteConstants.driverDeliveries,
         name: 'driver-deliveries',
-        builder: (context, state) =>
-            const _DriverPlaceholder(title: 'My Deliveries'),
+        builder: (context, state) => const DeliveriesListScreen(),
         routes: [
           GoRoute(
             path: ':deliveryId',
             name: 'driver-delivery-detail',
-            builder: (context, state) =>
-                const _DriverPlaceholder(title: 'Delivery Detail'),
-            routes: [
-              GoRoute(
-                path: 'proof',
-                name: 'driver-delivery-proof',
-                builder: (context, state) =>
-                    const _DriverPlaceholder(title: 'Proof of Delivery'),
-              ),
-            ],
+            builder: (context, state) => DeliveryDetailScreen(
+              orderId: state.pathParameters['deliveryId']!,
+              initial: state.extra as Delivery?,
+            ),
           ),
         ],
       ),

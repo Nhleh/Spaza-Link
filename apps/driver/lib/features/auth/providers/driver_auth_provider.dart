@@ -1,12 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spazalink_core/core.dart';
 
-import '../data/driver_firebase_auth_repository.dart';
+import '../data/driver_supabase_auth_repository.dart';
 
 // ── Repository ─────────────────────────────────────────────────────────────────
 
-final driverAuthRepositoryProvider = Provider<AuthRepository>((ref) {
-  return DriverFirebaseAuthRepository();
+final driverAuthRepositoryProvider =
+    Provider<DriverSupabaseAuthRepository>((ref) {
+  return DriverSupabaseAuthRepository();
+});
+
+/// The signed-in account must be a driver — used to block non-drivers.
+final driverIsDriverProvider = FutureProvider<bool>((ref) async {
+  final uid = ref.watch(driverAuthUidProvider).valueOrNull;
+  if (uid == null) return false;
+  final user = await ref.watch(driverAuthRepositoryProvider).getUser(uid);
+  return user?.role == 'driver';
 });
 
 // ── Auth UID stream ────────────────────────────────────────────────────────────
